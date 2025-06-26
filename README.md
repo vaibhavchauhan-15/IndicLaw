@@ -3,6 +3,7 @@
 IndicLaw AI is an intelligent chatbot system designed to provide legal information and assistance in multiple Indian languages. The application makes legal information accessible to everyone through multilingual support and easy-to-understand responses.
 
 ![IndicLaw AI Screenshot](./screenshots/LandingPage.png)
+![IndicLaw AI Screenshot](./screenshots/chatPage.png)
 
 ## 📑 Table of Contents
 
