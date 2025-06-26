@@ -1,0 +1,161 @@
+{
+  "navbar": {
+    "features": "Features",
+    "howItWorks": "How It Works",
+    "aboutUs": "About Us",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "title": "Get Legal Assistance",
+    "subtitle": "In Your Language",
+    "description": "IndicLaw AI makes legal information accessible to everyone with multilingual support and easy-to-understand answers to your legal questions.",
+    "askQuestion": "Ask a Question",
+    "learnMore": "Learn More"
+  },
+  "stats": {
+    "languages": "Languages",
+    "questionsAnswered": "Questions Answered",
+    "availability": "Availability",
+    "freeAccess": "Free Access"
+  },
+  "features": {
+    "title": "Why Choose IndicLaw AI",
+    "subtitle": "Our platform is designed to make legal information accessible to everyone in India, regardless of language barriers.",
+    "multilingualChatbot": {
+      "title": "Multilingual Support",
+      "description": "Get legal assistance in 10+ Indian languages including Hindi, Bengali, Tamil, Telugu, Marathi and more."
+    },
+    "documentSummary": {
+      "title": "Document Analysis",
+      "description": "Upload legal documents to get simplified explanations and summaries that are easy to understand."
+    },
+    "nearbyAdvocates": {
+      "title": "Legal Professionals",
+      "description": "Get connected with legal professionals near you when you need personalized legal assistance."
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Using IndicLaw AI is simple and intuitive, designed to provide you legal assistance in three easy steps.",
+    "steps": {
+      "step1": {
+        "title": "Ask Your Question",
+        "description": "Type your legal query in any supported language or upload relevant documents."
+      },
+      "step2": {
+        "title": "Get AI-Powered Answer",
+        "description": "Our AI analyzes your question and provides accurate, easy-to-understand information."
+      },
+      "step3": {
+        "title": "Take Informed Action",
+        "description": "Use the information to understand your legal situation and decide on next steps."
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to Get Legal Assistance?",
+    "subtitle": "Start asking your legal questions and get helpful answers within seconds.",
+    "button": "Start Chatting Now"
+  },
+  "about": {
+    "title": "About IndicLaw AI",
+    "subtitle": "We're on a mission to make legal information accessible to everyone in India, bridging the gap between complex legal systems and everyday citizens.",
+    "vision": {
+      "title": "Our Vision",
+      "description1": "At IndicLaw AI, we believe that understanding the law should not be limited by language barriers or complex legal jargon.",
+      "description2": "Our vision is to democratize access to legal information across India, empowering citizens to make informed decisions about their legal matters."
+    },
+    "technology": {
+      "title": "Our Technology",
+      "point1": "Advanced AI trained on Indian legal frameworks and precedents",
+      "point2": "Natural language processing in multiple Indian languages",
+      "point3": "Document analysis capabilities for legal paperwork",
+      "point4": "Continuous learning and improvement from user interactions"
+    }
+  },
+  "footer": {
+    "description": "Making legal information accessible to everyone in India through AI-powered assistance in multiple languages.",
+    "quickLinks": "Quick Links",
+    "languages": "Languages",
+    "contact": "Contact",
+    "copyright": "© {{year}} IndicLaw AI. All rights reserved."
+  },
+  "language": {
+    "change": "Change Language",
+    "current": "Current Language"
+  },
+  "chatbot": {
+    "title": "AI Legal Assistant",
+    "placeholder": "Type your legal question...",
+    "send": "Send",
+    "uploadFile": "Upload Document",
+    "startNewChat": "Start New Chat",
+    "welcome": "Hello! I'm your legal assistant. How can I help you today?"
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Access IndicLaw chatbot to get legal assistance",
+    "description": "Sign in to your account to continue",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email address",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in...",
+    "continueWithGoogle": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "createAccount": "Sign Up",
+    "orContinueWith": "Or continue with",
+    "success": "Login successful",
+    "welcome": "Welcome back!",
+    "error": "Authentication error",
+    "genericError": "An error occurred. Please try again.",
+    "googleError": "Could not sign in with Google. Please try again.",
+    "validation": {
+      "email": "Please enter a valid email address",
+      "password": "Password must be at least 6 characters"
+    },
+    "resetPassword": "Reset Password",
+    "resetDescription": "Enter your email to receive a password reset link",
+    "sendReset": "Send Reset Link",
+    "sending": "Sending...",
+    "resetSent": "Reset link sent",
+    "resetInstructions": "Check your email for instructions to reset your password",
+    "resetError": "Reset error",
+    "resetEmailRequired": "Please enter your email address",
+    "backToLogin": "Back to login"
+  },
+  "signup": {
+    "title": "Create an Account",
+    "subtitle": "Join IndicLaw and get legal assistance in your language",
+    "description": "Fill in your details to create a new account",
+    "nameLabel": "Name",
+    "namePlaceholder": "Enter your full name",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email address",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Create a password (min. 6 characters)",
+    "confirmPasswordLabel": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "createButton": "Sign Up",
+    "creating": "Creating account...",
+    "orContinueWith": "Or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "alreadyHaveAccount": "Already have an account?",
+    "login": "Sign In",
+    "success": "Account created successfully",
+    "welcome": "Welcome, {{name}}!",
+    "error": "Registration error",
+    "genericError": "An error occurred. Please try again.",
+    "googleError": "Could not sign up with Google. Please try again.",
+    "validation": {
+      "name": "Name must be at least 2 characters",
+      "email": "Please enter a valid email address",
+      "password": "Password must be at least 6 characters",
+      "confirmPassword": "Password confirmation must be at least 6 characters",
+      "passwordsMatch": "Passwords must match"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+/* Global CSS Import */
+@import url('./styles/global.css');
+@import url('./styles/animatedButton.css');
+
+/* Tailwind Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import any additional component-specific styles */

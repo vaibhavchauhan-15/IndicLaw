@@ -1,0 +1,84 @@
+.neu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  cursor: pointer;
+  width: 150px;
+  height: 50px;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
+  font-family: "Source Sans Pro", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #606060;
+  text-shadow: 0 1px #fff;
+}
+
+/* Special popping animation for the navbar Get Started button */
+@keyframes popEffect {
+  0% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0.3);
+  }
+  50% { 
+    transform: scale(1.08); 
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+  100% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+.neu-button.navbar-get-started {
+  animation: popEffect 3s infinite;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  position: relative;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 70%, #FDFDFD 100%);
+  border: 1px solid #8F9092;
+}
+
+.neu-button.navbar-get-started:hover {
+  animation: none;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  background-image: linear-gradient(to top, #D0D1D3 0%, #fff 80%, #FDFDFD 100%);
+  transition: all 0.3s ease;
+}
+
+.neu-button:hover {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 3px 3px #CECFD1;
+}
+
+.neu-button:active {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
+}
+
+.neu-button:focus {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
+}
+
+/* Make the button adapt to different sizes while maintaining style */
+.neu-button.neu-button-lg {
+  width: 200px;
+  height: 56px;
+  font-size: 16px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .neu-button {
+    width: 140px;
+    height: 46px;
+    font-size: 13px;
+  }
+  
+  .neu-button.neu-button-lg {
+    width: 180px;
+    height: 52px;
+    font-size: 15px;
+  }
+}

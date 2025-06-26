@@ -1,0 +1,771 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  User,
+  sendPasswordResetEmail,
+  updateProfile,
+  updateEmail,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  deleteUser,
+  onIdTokenChanged,  // Add this for token refresh
+  getIdToken           // Add this for token handling
+} from 'firebase/auth';
+import { app, db, storage } from '@/lib/firebase';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+
+interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  photoURL?: string;
+  gender?: string;
+  age?: number;
+  dob?: string;
+  createdAt: any; // Using any to handle Firestore Timestamp and Date
+  updatedAt: any;
+  lastLogin?: any; // Track user's last login time
+}
+
+interface AuthContextType {
+  currentUser: User | null;
+  userProfile: UserProfile | null;
+  loading: boolean;
+  signup: (email: string, password: string, name: string) => Promise<User | undefined>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  googleSignIn: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
+  updateUserEmail: (newEmail: string, password: string) => Promise<void>;
+  updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  uploadProfilePhoto: (file: File, onProgress?: (progress: number) => void) => Promise<string>;
+  deleteUserAccount: (password: string) => Promise<void>;
+  getAuthToken: () => Promise<string | null>; // Add token retrieval method
+  error: string | null;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+
+  // Listen for auth state changes and token refreshes
+  useEffect(() => {
+    console.log("Setting up auth state listener");
+    
+    // Listen for auth state changes (sign in/out)
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? `User: ${user.uid}` : "No user");
+      setCurrentUser(user);
+      
+      if (user) {
+        try {
+          // Get token for API requests
+          const token = await getIdToken(user, true);
+          localStorage.setItem('authToken', token);
+          
+          // Get user profile from Firestore
+          const userRef = doc(db, 'userProfiles', user.uid);
+          const docSnap = await getDoc(userRef);
+          
+          if (docSnap.exists()) {
+            console.log("User profile found in Firestore");
+            setUserProfile(docSnap.data() as UserProfile);
+            
+            // Update last login time
+            await updateDoc(userRef, {
+              lastLogin: serverTimestamp()
+            });
+          } else {
+            console.log("No profile found for user, creating one");
+            // Create a new profile if none exists
+            const newProfile: UserProfile = {
+              uid: user.uid,
+              name: user.displayName || '',
+              email: user.email || '',
+              photoURL: user.photoURL || undefined,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastLogin: serverTimestamp()
+            };
+            
+            await setDoc(userRef, newProfile);
+            setUserProfile(newProfile);
+          }
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
+        }
+      } else {
+        // Clear user data on sign out
+        setUserProfile(null);
+        localStorage.removeItem('authToken');
+      }
+      
+      setLoading(false);
+    });
+    
+    // Listen for ID token changes (refreshes)
+    const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const token = await getIdToken(user);
+          localStorage.setItem('authToken', token);
+        } catch (err) {
+          console.error("Error refreshing token:", err);
+        }
+      }
+    });
+    
+    return () => {
+      unsubscribeAuth();
+      unsubscribeToken();
+    };
+  }, [auth]);
+
+  // Sign up new user
+  const signup = async (email: string, password: string, name: string) => {
+    try {
+      console.log("Starting signup process for:", email);
+      
+      // Validate inputs
+      if (!email || !password || !name) {
+        throw new Error("Email, password and name are required");
+      }
+      
+      if (name.length < 2) {
+        throw new Error("Name must be at least 2 characters long");
+      }
+      
+      // Clear any previous error
+      setError(null);
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("User created successfully:", userCredential.user.uid);
+      
+      // Update profile with display name
+      if (userCredential.user) {
+        try {
+          await updateProfile(userCredential.user, { displayName: name });
+          console.log("User profile updated with display name:", name);
+          
+          // Create user profile in Firestore with error handling
+          const newProfile: UserProfile = {
+            uid: userCredential.user.uid,
+            name,
+            email,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+          };
+          
+          const userRef = doc(db, 'userProfiles', userCredential.user.uid);
+          await setDoc(userRef, newProfile);
+          console.log("User profile created in Firestore");
+          
+          // Set the current user and profile data
+          setCurrentUser(userCredential.user);
+          
+          // Get token for future API requests
+          const token = await getIdToken(userCredential.user);
+          localStorage.setItem('authToken', token);
+          
+          // Refresh user profile after creation
+          const profileSnap = await getDoc(userRef);
+          if (profileSnap.exists()) {
+            setUserProfile(profileSnap.data() as UserProfile);
+          }
+          
+          return userCredential.user;
+        } catch (profileError: any) {
+          console.error("Error updating profile:", profileError);
+          setError(`Profile creation failed: ${profileError.message}`);
+          // Don't throw here, as we've already created the user
+        }
+      }
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      // Provide more user-friendly error messages
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email address is already in use. Please try logging in or use a different email.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please use a stronger password (at least 6 characters).');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
+      throw err;
+    }
+  };
+
+  // Login existing user
+  const login = async (email: string, password: string) => {
+    try {
+      console.log("Starting login process for:", email);
+      
+      // Validate inputs
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("User logged in successfully:", userCredential.user.uid);
+      
+      // Fetch user profile after successful login
+      try {
+        const userRef = doc(db, 'userProfiles', userCredential.user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data() as UserProfile);
+        } else {
+          // Create profile if it doesn't exist (fallback)
+          console.log("Creating missing user profile for existing user");
+          const newProfile: UserProfile = {
+            uid: userCredential.user.uid,
+            name: userCredential.user.displayName || '',
+            email: userCredential.user.email || '',
+            photoURL: userCredential.user.photoURL || undefined,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          };
+          
+          await setDoc(userRef, newProfile);
+          setUserProfile(newProfile);
+        }
+      } catch (profileError) {
+        console.error("Error fetching user profile after login:", profileError);
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      
+      // Provide more user-friendly error messages
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many unsuccessful login attempts. Please try again later or reset your password.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('This account has been disabled. Please contact support.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
+      throw err;
+    }
+  };
+
+  // Logout user
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  // Google sign in
+  const googleSignIn = async () => {
+    try {
+      console.log("Starting Google sign-in process");
+      // Configure Google provider with additional scopes if needed
+      googleProvider.setCustomParameters({
+        prompt: 'select_account' // Always prompt user to select account
+      });
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      console.log("Google sign-in successful for:", user.uid);
+      
+      // Check if user profile exists, if not create one
+      const profileRef = doc(db, 'userProfiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (!profileSnap.exists()) {
+        console.log("Creating new user profile for Google sign-in user");
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || undefined,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        
+        await setDoc(profileRef, newProfile);
+        setUserProfile(newProfile);
+        console.log("User profile created in Firestore for Google sign-in user");
+      } else {
+        // Update the last login time
+        await updateDoc(profileRef, {
+          lastLogin: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        
+        // Set user profile
+        setUserProfile(profileSnap.data() as UserProfile);
+        console.log("Existing user profile loaded for Google sign-in user");
+      }
+    } catch (err: any) {
+      console.error("Google sign-in error:", err);
+      
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in cancelled. Please try again.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Sign-in popup was blocked. Please allow popups for this website.');
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError('An account already exists with the same email address but different sign-in method. Try signing in with a different method.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'Google sign-in failed. Please try again.');
+      }
+      throw err;
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+  
+  // Update user profile
+  const updateUserProfile = async (data: Partial<UserProfile>) => {
+    try {
+      if (!currentUser) throw new Error('No user logged in');
+      
+      const userRef = doc(db, 'userProfiles', currentUser.uid);
+      
+      // Update display name if it's changed
+      if (data.name && data.name !== currentUser.displayName) {
+        await updateProfile(currentUser, { displayName: data.name });
+      }
+      
+      // Update photoURL if it's provided
+      if (data.photoURL && data.photoURL !== currentUser.photoURL) {
+        await updateProfile(currentUser, { photoURL: data.photoURL });
+      }
+      
+      // Update Firestore user profile
+      await updateDoc(userRef, {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Refresh user profile
+      const updatedProfile = await getDoc(userRef);
+      if (updatedProfile.exists()) {
+        setUserProfile(updatedProfile.data() as UserProfile);
+      }
+      
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+  
+  // Update user email
+  const updateUserEmail = async (newEmail: string, password: string) => {
+    try {
+      if (!currentUser || !currentUser.email) throw new Error('No user logged in');
+      
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, credential);
+      
+      // Update email in Firebase Auth
+      await updateEmail(currentUser, newEmail);
+      
+      // Update email in Firestore
+      const userRef = doc(db, 'userProfiles', currentUser.uid);
+      await updateDoc(userRef, {
+        email: newEmail,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Refresh user profile
+      const updatedProfile = await getDoc(userRef);
+      if (updatedProfile.exists()) {
+        setUserProfile(updatedProfile.data() as UserProfile);
+      }
+      
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+  
+  // Update user password
+  const updateUserPassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      if (!currentUser || !currentUser.email) throw new Error('No user logged in');
+      
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      
+      // Update password
+      await updatePassword(currentUser, newPassword);
+      
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+  
+  // Upload profile photo
+  const uploadProfilePhoto = async (file: File, onProgress?: (progress: number) => void): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!currentUser) throw new Error('No user logged in');
+        
+        const fileExtension = file.name.split('.').pop();
+        const storageRef = ref(storage, `profilePhotos/${currentUser.uid}/profile-${Date.now()}.${fileExtension}`);
+        
+        // Delete old profile photo if exists and has a custom one (not from Google)
+        if (currentUser.photoURL && currentUser.photoURL.includes('profilePhotos')) {
+          const oldPhotoRef = ref(storage, currentUser.photoURL);
+          deleteObject(oldPhotoRef).catch(err => console.error("Error deleting old profile photo:", err));
+        }
+        
+        // Upload new photo
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        
+        uploadTask.on('state_changed', 
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            if (onProgress) onProgress(progress);
+          },
+          (error) => {
+            setError(error.message);
+            reject(error);
+          },
+          async () => {
+            // Upload complete, get download URL
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            
+            // Update user profile with new photo URL
+            await updateProfile(currentUser, { photoURL: downloadURL });
+            
+            // Update Firestore profile
+            const userRef = doc(db, 'userProfiles', currentUser.uid);
+            await updateDoc(userRef, {
+              photoURL: downloadURL,
+              updatedAt: serverTimestamp()
+            });
+            
+            // Refresh user profile
+            const updatedProfile = await getDoc(userRef);
+            if (updatedProfile.exists()) {
+              setUserProfile(updatedProfile.data() as UserProfile);
+            }
+            
+            resolve(downloadURL);
+          }
+        );
+      } catch (err: any) {
+        setError(err.message);
+        reject(err);
+      }
+    });
+  };
+  
+  // Delete user account
+  const deleteUserAccount = async (password: string) => {
+    try {
+      if (!currentUser || !currentUser.email) throw new Error('No user logged in');
+      
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, credential);
+      
+      // Delete profile photo if it exists
+      if (currentUser.photoURL && currentUser.photoURL.includes('profilePhotos')) {
+        const photoRef = ref(storage, currentUser.photoURL);
+        await deleteObject(photoRef).catch(err => console.error("Error deleting profile photo:", err));
+      }
+      
+      // Delete user profile from Firestore
+      await deleteDoc(doc(db, 'userProfiles', currentUser.uid));
+      
+      // Delete user account from Firebase Auth
+      await deleteUser(currentUser);
+      
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  // Fetch user profile from Firestore when auth state changes
+  const fetchUserProfile = async (user: User) => {
+    try {
+      console.log(`Fetching user profile for ${user.uid}`);
+      const userRef = doc(db, 'userProfiles', user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        console.log("User profile found in Firestore");
+        
+        // Check if profile needs updates (e.g., if Firebase Auth has newer data)
+        let needsUpdate = false;
+        const updates: Partial<UserProfile> = {
+          updatedAt: serverTimestamp()
+        };
+        
+        // Check if display name needs update
+        if (user.displayName && (!userData.name || userData.name !== user.displayName)) {
+          updates.name = user.displayName;
+          needsUpdate = true;
+        }
+        
+        // Check if email needs update
+        if (user.email && userData.email !== user.email) {
+          updates.email = user.email;
+          needsUpdate = true;
+        }
+        
+        // Check if photo URL needs update
+        if (user.photoURL && userData.photoURL !== user.photoURL) {
+          updates.photoURL = user.photoURL;
+          needsUpdate = true;
+        }
+        
+        // Update if needed
+        if (needsUpdate) {
+          console.log("Updating user profile with newer information from Auth");
+          await updateDoc(userRef, updates);
+          
+          // Get the updated profile
+          const updatedSnap = await getDoc(userRef);
+          if (updatedSnap.exists()) {
+            setUserProfile(updatedSnap.data() as UserProfile);
+          } else {
+            setUserProfile(userData as UserProfile);
+          }
+        } else {
+          // Use existing profile
+          setUserProfile(userData as UserProfile);
+        }
+      } else {
+        console.log("User profile not found, creating new profile");
+        // Create profile if it doesn't exist
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || undefined,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        };
+        
+        await setDoc(userRef, newProfile);
+        
+        // Get the profile again to ensure we have the actual serverTimestamp
+        const updatedSnap = await getDoc(userRef);
+        if (updatedSnap.exists()) {
+          setUserProfile(updatedSnap.data() as UserProfile);
+        } else {
+          setUserProfile(newProfile);
+        }
+        console.log("New user profile created successfully");
+      }
+    } catch (err) {
+      console.error("Error fetching/updating user profile:", err);
+      // Don't set error here as this is used in the auth state listener
+      // and would constantly show errors to the user
+    }
+  };
+
+  // Monitor auth state changes
+  useEffect(() => {
+    console.log("Setting up auth state listener");
+    setLoading(true);
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? `User: ${user.uid}` : "No user");
+      
+      try {
+        // Set current user
+        setCurrentUser(user);
+        
+        // Update user profile if user exists
+        if (user) {
+          try {
+            // Record login timestamp in Firestore for analytics (optional)
+            const userRef = doc(db, 'userProfiles', user.uid);
+            
+            // Update login timestamp if profile exists
+            const profileSnap = await getDoc(userRef);
+            if (profileSnap.exists()) {
+              await updateDoc(userRef, {
+                lastLogin: serverTimestamp(),
+              });
+            }
+            
+            // Fetch full profile data
+            await fetchUserProfile(user);
+          } catch (err) {
+            console.error("Error processing auth state change:", err);
+          }
+        } else {
+          // Clear user profile when logged out
+          setUserProfile(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, (error) => {
+      // Handle auth state listener error
+      console.error("Auth state listener error:", error);
+      setError("Authentication service error. Please try again later.");
+      setLoading(false);
+    });
+
+    // Clean up subscription
+    return () => {
+      console.log("Cleaning up auth state listener");
+      unsubscribe();
+    };
+  }, [auth]);
+
+  // Token refresh and session management
+  useEffect(() => {
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, get the token
+        try {
+          const token = await getIdToken(user, true); // Force refresh
+          console.log("Token refreshed:", token);
+          
+          // Optionally, you can send the token to your server for validation
+          // await fetch('/api/validateToken', {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //     'Authorization': `Bearer ${token}`
+          //   },
+          //   body: JSON.stringify({ uid: user.uid })
+          // });
+        } catch (err) {
+          console.error("Error refreshing token:", err);
+        }
+      }
+    });
+
+    // Clean up subscription
+    return () => {
+      unsubscribe();
+    };
+  }, [auth]);
+
+  // Monitor token changes for refresh
+  useEffect(() => {
+    console.log("Setting up token refresh monitor");
+    
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, get the token
+        const token = await getIdToken(user);
+        
+        // You can store the token in localStorage if needed for API calls
+        // This is generally safe for token-based auth, but sensitive operations should
+        // still re-authenticate the user
+        localStorage.setItem('authToken', token);
+        
+        // Optional: Update last activity timestamp
+        localStorage.setItem('lastActivity', Date.now().toString());
+      } else {
+        // User is signed out, clear the token
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('lastActivity');
+      }
+    });
+
+    // Optional: Session timeout monitor
+    const activityInterval = setInterval(() => {
+      const lastActivity = localStorage.getItem('lastActivity');
+      if (lastActivity && currentUser) {
+        const inactiveTime = Date.now() - parseInt(lastActivity);
+        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+        
+        if (inactiveTime > SESSION_TIMEOUT) {
+          // Logout after inactivity
+          console.log("Session timed out due to inactivity");
+          logout();
+        }
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      console.log("Cleaning up token refresh monitor");
+      unsubscribe();
+      clearInterval(activityInterval);
+    };
+  }, [auth, currentUser]);
+
+  // Create an auth token getter function
+  const getAuthToken = async () => {
+    if (auth.currentUser) {
+      return await getIdToken(auth.currentUser);
+    }
+    return null;
+  };
+
+  // Define context value with all auth functions and state
+  const value = {
+    currentUser,
+    userProfile,
+    loading,
+    signup,
+    login,
+    logout,
+    googleSignIn,
+    resetPassword,
+    updateUserProfile,
+    updateUserEmail,
+    updateUserPassword,
+    uploadProfilePhoto,
+    deleteUserAccount,
+    getAuthToken,
+    error,
+    setError
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

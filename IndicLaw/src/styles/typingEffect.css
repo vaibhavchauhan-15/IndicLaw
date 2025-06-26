@@ -1,0 +1,40 @@
+/* Typing effect animation styles */
+.typing-effect {
+  will-change: transform;
+  contain: content;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+
+/* Optimize rendering performance */
+.typing-effect * {
+  backface-visibility: hidden;
+}
+
+/* Use GPU acceleration for smoother animations */
+.message-content {
+  transform: translateZ(0);
+}
+
+/* Optimize for mobile */
+@media (max-width: 640px) {
+  .typing-effect {
+    word-break: break-word;
+  }
+}

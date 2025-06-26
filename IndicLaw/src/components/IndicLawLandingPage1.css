@@ -1,0 +1,350 @@
+/* IndicLawLandingPage.css */
+
+/* Hero section animations */
+.hero-animation-element {
+  animation: fadeInUp 1s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card hover effects */
+.feature-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Animated underline for nav links */
+.nav-link {
+  position: relative;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: #2c5282; /* link-hover color from our light theme */
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Pulse animation for CTA buttons */
+.btn-pulse {
+  position: relative;
+  animation: buttonHighlight 3s infinite;
+}
+
+.btn-pulse::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes buttonHighlight {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 1);
+  }
+}
+
+/* Floating animation for decorative elements */
+.float-element {
+  animation: floating 3s infinite ease-in-out;
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Mobile menu animation */
+.mobile-menu {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.mobile-menu.hidden {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.mobile-menu.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0) translateX(-50%);
+  }
+  40% {
+    transform: translateY(-20px) translateX(-50%);
+  }
+  60% {
+    transform: translateY(-10px) translateX(-50%);
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Shine effect for decorative elements */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine::after {
+  content: '';
+  position: absolute;
+  top: -110%;
+  left: -210%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  transform: rotate(30deg);
+  background: linear-gradient(
+    to right, 
+    rgba(255, 255, 255, 0.13) 0%,
+    rgba(255, 255, 255, 0.13) 77%,
+    rgba(255, 255, 255, 0.5) 92%,
+    rgba(255, 255, 255, 0.0) 100%
+  );
+}
+
+.shine:hover::after {
+  opacity: 1;
+  top: -30%;
+  left: -30%;
+  transition-property: left, top, opacity;
+  transition-duration: 0.7s, 0.7s, 0.15s;
+  transition-timing-function: ease;
+}
+
+/* Glass effect for cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Landing page styling (moved from overlay CSS) */
+.landing-page-content {
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+  will-change: opacity, visibility;
+}
+
+.landing-page-wrapper {
+  transition: padding-top 0.8s ease;
+}
+
+/* Light theme adjustments for the landing page */
+body.light-theme .feature-card,
+body.light-theme .glass-card {
+  border-color: #dddddd;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+body.light-theme .btn-pulse::after {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+body.light-theme .nav-link::after {
+  background-color: #2c5282;
+}
+
+/* Ensure text is readable in light theme */
+body.light-theme .text-secondary-text {
+  color: #444444;
+}
+
+/* Button hover effects */
+.btn-pulse:hover {
+  animation: none; /* Stop the pulse animation on hover */
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.9); /* Static strong glow on hover */
+  transition: all 0.3s ease;
+}
+
+.btn-pulse:hover::after {
+  opacity: 0; /* Hide the pulse effect on hover */
+}
+
+.btn-pulse:active {
+  transform: scale(0.95); /* Slight scale down when clicked */
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+}
+
+/* Custom button-16 style with enhanced depth and shadow */
+.btn-16 {
+  border: none;
+  color: #000;
+  position: relative;
+  z-index: 1;
+  background: #f0f0f0;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 10px 20px;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 2px 2px rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+.btn-16:after {
+  position: absolute;
+  content: "";
+  width: 0;
+  height: 100%;
+  top: 0;
+  left: 0;
+  direction: rtl;
+  z-index: -1;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #ffffff, #e6e6e6);
+  box-shadow:
+   -7px -7px 20px 0px rgba(255, 255, 255, 0.9),
+   -4px -4px 5px 0px rgba(255, 255, 255, 0.9),
+   7px 7px 20px 0px rgba(0, 0, 0, 0.2),
+   4px 4px 5px 0px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.btn-16:hover {
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+}
+
+.btn-16:hover:after {
+  left: auto;
+  right: 0;
+  width: 100%;
+}
+
+.btn-16:active {
+  top: 2px;
+  transform: translateY(1px);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 2px 2px rgba(255, 255, 255, 0.7);
+}
+
+/* Enhanced Navbar Styling */
+header.sticky {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Logo animation */
+@keyframes logoGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.8));
+  }
+}
+
+.logo-text {
+  animation: logoGlow 3s infinite ease-in-out;
+} 
+
+/* Additional Tailwind utility classes */
+.bg-secondary-bg {
+  background-color: #f8fafc;
+}
+
+.bg-tertiary-bg {
+  background-color: #f1f5f9;
+}
+
+.text-primary-text {
+  color: #1e293b;
+}
+
+.text-secondary-text {
+  color: #64748b;
+}
+
+.bg-button-bg {
+  background-color: #3b82f6;
+}
+
+.text-link-hover {
+  color: #2563eb;
+}

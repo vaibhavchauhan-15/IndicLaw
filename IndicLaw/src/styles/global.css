@@ -1,0 +1,450 @@
+/* IndicLaw Global CSS */
+/* Custom Font Imports */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Root Variables - Design System */
+:root {
+  /* Core Colors */
+  --background-color: hsl(0, 0%, 100%);
+  --foreground-color: hsl(222.2, 84%, 4.9%);
+  
+  /* Primary Colors - Legal Blue Theme */
+  --primary-color: hsl(215, 100%, 33%); /* #0055aa - Strong Blue */
+  --primary-foreground-color: hsl(210, 40%, 98%);
+  
+  /* Secondary Colors */
+  --secondary-color: hsl(210, 40%, 96.1%);
+  --secondary-foreground-color: hsl(222.2, 47.4%, 11.2%);
+  
+  /* UI Elements */
+  --card-color: hsl(0, 0%, 100%);
+  --card-foreground-color: hsl(222.2, 84%, 4.9%);
+  --muted-color: hsl(210, 40%, 96.1%);
+  --muted-foreground-color: hsl(215.4, 16.3%, 46.9%);
+  --accent-color: hsl(210, 40%, 96.1%);
+  --accent-foreground-color: hsl(222.2, 47.4%, 11.2%);
+  
+  /* Feedback Colors */
+  --destructive-color: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground-color: hsl(210, 40%, 98%);
+  --success-color: hsl(142, 76%, 36%);
+  --success-foreground-color: hsl(210, 40%, 98%);
+  --warning-color: hsl(38, 92%, 50%);
+  --warning-foreground-color: hsl(222.2, 47.4%, 11.2%);
+  --info-color: hsl(199, 89%, 48%);
+  --info-foreground-color: hsl(210, 40%, 98%);
+  
+  /* Border and Interactive Elements */
+  --border-color: hsl(214.3, 31.8%, 91.4%);
+  --input-color: hsl(214.3, 31.8%, 91.4%);
+  --ring-color: hsl(215, 100%, 33%);
+  --border-radius: 0.5rem;
+  
+  /* Sidebar Specific */
+  --sidebar-background-color: hsl(0, 0%, 98%);
+  --sidebar-foreground-color: hsl(240, 5.3%, 26.1%);
+  --sidebar-primary-color: hsl(240, 5.9%, 10%);
+  --sidebar-primary-foreground-color: hsl(0, 0%, 98%);
+  --sidebar-border-color: hsl(220, 13%, 91%);
+  
+  /* Chat Elements */
+  --user-message-bg: hsla(215, 100%, 33%, 0.1);
+  --ai-message-bg: hsl(0, 0%, 98%);
+  --chat-input-bg: hsl(0, 0%, 100%);
+  --chat-input-border: hsl(214.3, 31.8%, 91.4%);
+}
+
+/* Dark Mode */
+.dark {
+  /* Core Colors */
+  --background-color: hsl(222.2, 84%, 4.9%);
+  --foreground-color: hsl(210, 40%, 98%);
+  
+  /* Primary Colors - Dark Mode */
+  --primary-color: hsl(217.2, 91.2%, 59.8%); /* #3b82f6 - Lighter Blue */
+  --primary-foreground-color: hsl(222.2, 47.4%, 11.2%);
+  
+  /* Secondary Colors */
+  --secondary-color: hsl(217.2, 32.6%, 17.5%);
+  --secondary-foreground-color: hsl(210, 40%, 98%);
+  
+  /* UI Elements */
+  --card-color: hsl(222.2, 84%, 4.9%);
+  --card-foreground-color: hsl(210, 40%, 98%);
+  --muted-color: hsl(217.2, 32.6%, 17.5%);
+  --muted-foreground-color: hsl(215, 20.2%, 65.1%);
+  --accent-color: hsl(217.2, 32.6%, 17.5%);
+  --accent-foreground-color: hsl(210, 40%, 98%);
+  
+  /* Feedback Colors */
+  --destructive-color: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground-color: hsl(210, 40%, 98%);
+  --success-color: hsl(142, 70%, 45%);
+  --success-foreground-color: hsl(210, 40%, 98%);
+  --warning-color: hsl(38, 92%, 50%);
+  --warning-foreground-color: hsl(210, 40%, 98%);
+  --info-color: hsl(199, 89%, 48%);
+  --info-foreground-color: hsl(210, 40%, 98%);
+  
+  /* Border and Interactive Elements */
+  --border-color: hsl(217.2, 32.6%, 17.5%);
+  --input-color: hsl(217.2, 32.6%, 17.5%);
+  --ring-color: hsl(224.3, 76.3%, 48%);
+  
+  /* Sidebar Specific */
+  --sidebar-background-color: hsl(240, 5.9%, 10%);
+  --sidebar-foreground-color: hsl(240, 4.8%, 95.9%);
+  --sidebar-primary-color: hsl(224.3, 76.3%, 48%);
+  --sidebar-primary-foreground-color: hsl(0, 0%, 100%);
+  --sidebar-border-color: hsl(240, 3.7%, 15.9%);
+  
+  /* Chat Elements */
+  --user-message-bg: hsla(217.2, 91.2%, 59.8%, 0.2);
+  --ai-message-bg: hsla(222.2, 84%, 4.9%, 0.3);
+  --chat-input-bg: hsl(217.2, 32.6%, 17.5%);
+  --chat-input-border: hsl(240, 3.7%, 15.9%);
+}
+
+/* Base Styles */
+/* Base Styles */
+* {
+  border-color: var(--border-color);
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--foreground-color);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+/* Component Styles */
+/* Buttons */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--primary-foreground-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  border: none;
+  transition: opacity 0.3s ease;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--secondary-foreground-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: hsla(210, 40%, 96.1%, 0.8);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--foreground-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+.btn-ghost:hover {
+  background-color: hsla(210, 40%, 96.1%, 0.5);
+}
+
+/* Cards */
+.feature-card {
+  background-color: var(--card-color);
+  color: var(--card-foreground-color);
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.glass-card {
+  background-color: hsla(0, 0%, 100%, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid hsla(0, 0%, 0%, 0.1);
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.dark .glass-card {
+  background-color: hsla(0, 0%, 0%, 0.3);
+}
+
+/* Chat Elements */
+.user-message {
+  background-color: var(--user-message-bg);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.ai-message {
+  background-color: var(--ai-message-bg);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.chat-input {
+  background-color: var(--chat-input-bg);
+  border: 1px solid var(--chat-input-border);
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  width: 100%;
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+
+.chat-input:focus {
+  box-shadow: 0 0 0 2px var(--ring-color);
+}
+
+/* Animations */
+/* Fade In Animation */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade Up Animation */
+.animate-fade-up {
+  animation: fadeUp 0.8s ease-out;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse Animation */
+.animate-pulse-subtle {
+  animation: pulseSoft 2s infinite;
+}
+
+@keyframes pulseSoft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Floating Animation */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.7);
+}
+
+/* Enhanced Text Formatting for AI Responses */
+.ai-message-content {
+  text-align: left;
+  line-height: 1.5;
+}
+
+.ai-message-content h1,
+.ai-message-content h2,
+.ai-message-content h3,
+.ai-message-content h4 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.ai-message-content h1 {
+  font-size: 1.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.ai-message-content h2 {
+  font-size: 1.25rem;
+}
+
+.ai-message-content h3 {
+  font-size: 1.1rem;
+}
+
+.ai-message-content h4 {
+  font-size: 1rem;
+}
+
+.ai-message-content ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ai-message-content ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ai-message-content li {
+  margin-bottom: 0.25rem;
+}
+
+.ai-message-content pre {
+  background-color: hsl(var(--muted));
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  font-family: 'Cascadia Code', 'SF Mono', Monaco, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+
+.ai-message-content pre code {
+  display: block;
+  padding: 0;
+  background-color: transparent;
+  color: inherit;
+  font-size: inherit;
+  white-space: pre;
+}
+
+.ai-message-content code {
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  background-color: hsl(var(--muted));
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.25rem;
+}
+
+.ai-message-content blockquote {
+  border-left: 4px solid hsl(var(--border));
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-message-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.ai-message-content th,
+.ai-message-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.ai-message-content th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
+
+/* Typing Effect Animation */
+.typing-effect {
+  will-change: transform;
+  contain: content;
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .typing-effect {
+    word-break: break-word;
+  }
+  
+  .ai-message-content pre {
+    font-size: 0.8rem;
+  }
+}
