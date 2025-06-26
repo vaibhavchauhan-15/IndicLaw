@@ -200,4 +200,4 @@ This project is licensed under the ISC License.
 
 ---
 
-Built with ❤️ by [Your Name]
+Built with ❤️ by Team Cornelia
