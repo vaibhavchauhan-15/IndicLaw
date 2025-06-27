@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { IndicLawLogo } from './IndicLawLogo';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarContentProps {
   onClose?: () => void;
@@ -21,6 +22,7 @@ export const SidebarContent = ({
 }: SidebarContentProps) => {
   const { currentUser, userProfile, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const handleLogout = async () => {
     try {
@@ -77,7 +79,7 @@ export const SidebarContent = ({
           }}
         >
           <Plus size={16} className="transition-transform duration-300 group-hover:rotate-90" />
-          New Conversation
+          {t("chatbot.startNewChat")}
         </Button>
       </div>
 
@@ -85,24 +87,24 @@ export const SidebarContent = ({
       <ScrollArea className="flex-1 px-4 py-4">
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1 py-1.5 text-xs uppercase font-medium text-slate-600 tracking-wider">
-            <span>Recent conversations</span>
+            <span>{t("chatbot.recentConversations")}</span>
             <History size={14} className="text-slate-500" />
           </div>
           
           {/* Placeholder for empty chat history */}
           <div className="text-center mt-6 bg-slate-50 p-6 rounded-lg border border-slate-100">
             <Bot size={40} className="mx-auto mb-3 text-blue-500/70" />
-            <p className="text-sm text-slate-700 font-medium">Your conversations will appear here</p>
-            <p className="text-xs mt-1 text-slate-500">Start chatting to get legal assistance</p>
+            <p className="text-sm text-slate-700 font-medium">{t("chatbot.conversationsWillAppear")}</p>
+            <p className="text-xs mt-1 text-slate-500">{t("chatbot.startChattingHint")}</p>
           </div>
           
           {/* Tips section */}
           <div className="mt-6 rounded-lg bg-blue-50 p-4 border border-blue-100 shadow-sm">
-            <p className="text-sm text-slate-700 font-medium mb-2">Helpful tips</p>
+            <p className="text-sm text-slate-700 font-medium mb-2">{t("chatbot.helpfulTips")}</p>
             <ul className="text-xs space-y-2 list-disc pl-4 text-slate-600">
-              <li>Ask specific legal questions for better answers</li>
-              <li>Upload documents for analysis</li>
-              <li>Try different phrasings if needed</li>
+              <li>{t("chatbot.tips.specificQuestions")}</li>
+              <li>{t("chatbot.tips.uploadDocuments")}</li>
+              <li>{t("chatbot.tips.tryDifferentPhrasings")}</li>
             </ul>
           </div>
         </div>
@@ -120,7 +122,7 @@ export const SidebarContent = ({
           onClick={onClearConversation}
         >
           <Trash2 size={16} />
-          Clear Conversation
+          {t("chatbot.clearConversation")}
         </Button>
         
         {/* Settings and Info buttons */}
@@ -132,7 +134,7 @@ export const SidebarContent = ({
                   <Settings size={18} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
+              <TooltipContent>{t("chatbot.settings")}</TooltipContent>
             </Tooltip>
             
             <Tooltip>
@@ -141,7 +143,7 @@ export const SidebarContent = ({
                   <Info size={18} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>About INDICLAW AI</TooltipContent>
+              <TooltipContent>{t("chatbot.aboutIndiclaw")}</TooltipContent>
             </Tooltip>
           </div>
         </TooltipProvider>

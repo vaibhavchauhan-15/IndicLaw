@@ -387,7 +387,7 @@ const Profile = () => {
 
   return (
     <div className="container mx-auto py-10 px-4 md:px-6">
-      <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+      <h1 className="text-3xl font-bold mb-6">{t("profile.title")}</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left column - Avatar and basic info */}
@@ -549,9 +549,9 @@ const Profile = () => {
           <CardContent>
             <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-                <TabsTrigger value="email">Email</TabsTrigger>
-                <TabsTrigger value="password">Password</TabsTrigger>
+                <TabsTrigger value="profile">{t("profile.personalInfo")}</TabsTrigger>
+                <TabsTrigger value="email">{t("profile.email")}</TabsTrigger>
+                <TabsTrigger value="password">{t("profile.password")}</TabsTrigger>
               </TabsList>
               
               {/* Profile Information Tab */}
@@ -563,9 +563,9 @@ const Profile = () => {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Display Name</FormLabel>
+                          <FormLabel>{t("profile.name")}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Your name" {...field} />
+                            <Input placeholder={t("profile.namePlaceholder")} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -630,8 +630,14 @@ const Profile = () => {
                     </div>
                     
                     <Button type="submit" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Save Changes
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("profile.saving")}
+                        </>
+                      ) : (
+                        t("profile.saveChanges")
+                      )}
                     </Button>
                   </form>
                 </Form>
@@ -676,8 +682,14 @@ const Profile = () => {
                     />
                     
                     <Button type="submit" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Update Email
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("profile.saving")}
+                        </>
+                      ) : (
+                        t("profile.updateEmail")
+                      )}
                     </Button>
                   </form>
                 </Form>
@@ -733,8 +745,14 @@ const Profile = () => {
                     />
                     
                     <Button type="submit" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Update Password
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("profile.saving")}
+                        </>
+                      ) : (
+                        t("profile.changePassword")
+                      )}
                     </Button>
                   </form>
                 </Form>

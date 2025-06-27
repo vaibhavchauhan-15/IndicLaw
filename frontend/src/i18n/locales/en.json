@@ -93,6 +93,18 @@
     "startNewChat": "Start New Chat",
     "welcome": "Hello! I'm your legal assistant. How can I help you today?",
     "emptyState": "Start a new conversation to get legal assistance in your preferred language.",
+    "recentConversations": "Recent Conversations",
+    "conversationsWillAppear": "Your conversations will appear here",
+    "startChattingHint": "Start chatting to get legal assistance",
+    "helpfulTips": "Helpful tips",
+    "tips": {
+      "specificQuestions": "Ask specific legal questions for better answers",
+      "uploadDocuments": "Upload documents for analysis",
+      "tryDifferentPhrasings": "Try different phrasings if needed"
+    },
+    "clearConversation": "Clear Conversation",
+    "settings": "Settings",
+    "aboutIndiclaw": "About INDICLAW AI",
     "typing": "AI is typing...",
     "errorMessage": "An error occurred. Please try again.",
     "networkError": "Network connection lost. Please check your internet connection.",
