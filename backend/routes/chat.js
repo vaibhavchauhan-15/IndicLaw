@@ -22,118 +22,210 @@ const router = express.Router();
 
 // Configure multer storage
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, config.uploads.path);
-  },
-  filename: function (req, file, cb) {
+  destination: (req, file, cb) => cb(null, config.uploads.path),
+  filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
 const upload = multer({ 
-  storage: storage,
+  storage,
   limits: { fileSize: config.uploads.maxFileSize },
-  fileFilter: (req, file, cb) => {
-    cb(null, true);
-  }
+  fileFilter: (req, file, cb) => cb(null, true)
 });
+
+/**
+ * Helper function to process uploaded files (images, PDFs, DOCX)
+ * @param {Object} file - The uploaded file object
+ * @returns {Promise<string>} - Extracted text from the file
+ */
+async function processUploadedFile(file) {
+  if (!file) return '';
+  
+  console.log("File received:", file.originalname, file.mimetype);
+  const type = file.mimetype;
+  try {
+    if (isSupportedImageFormat(type)) {
+      return `\n\nExtracted from image: ${await extractTextFromImage(file.path)}`;
+    } else if (type === 'application/pdf') {
+      return `\n\nExtracted from PDF: ${await extractTextFromPDF(file.path)}`;
+    } else if (type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return `\n\nExtracted from Word File: ${await extractTextFromDocx(file.path)}`;
+    }
+  } catch (fileErr) {
+    console.error("File processing error:", fileErr);
+  }
+  return '';
+}
+
+/**
+ * Clean up uploaded file after processing
+ * @param {Object} file - The uploaded file object
+ */
+async function cleanUpFile(file) {
+  if (file && file.path) {
+    try {
+      const fileStillExists = await fileExists(file.path);
+      if (fileStillExists) {
+        fs.unlinkSync(file.path);
+        console.log(`Cleaned up file: ${file.path}`);
+      }
+    } catch (cleanupError) {
+      console.error("Error cleaning up file:", cleanupError);
+    }
+  }
+}
+
+/**
+ * Handle file upload errors
+ * @param {Object} err - Error object
+ * @param {Object} res - Express response object
+ * @param {string} sessionId - Session ID
+ * @returns {Object} - Response object if error, null otherwise
+ */
+function handleUploadError(err, res, sessionId) {
+  if (!err) return null;
+  
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    console.error("File too large:", err);
+    return res.status(413).json({ 
+      error: "File too large", 
+      reply: `File size exceeds the maximum allowed size of ${Math.round(config.uploads.maxFileSize / (1024 * 1024))} MB.`,
+      sessionId
+    });
+  }
+  
+  console.error("File upload error:", err);
+  return res.status(400).json({
+    error: "File upload error",
+    reply: "There was an error uploading your file. Please try again.",
+    sessionId
+  });
+}
+
+/**
+ * Prepare messages with formatting instructions
+ * @param {Array} messages - Original messages array
+ * @returns {Array} - Enhanced messages with formatting instructions
+ */
+function prepareEnhancedMessages(messages) {
+  const formattingInstructions = responseFormatter.getFormattingInstructions();
+  const systemMessages = messages.filter(msg => msg.role === 'system');
+  const userMessages = messages.filter(msg => msg.role !== 'system');
+  
+  const enhancedSystemMessages = [
+    ...systemMessages,
+    { role: 'system', content: formattingInstructions }
+  ];
+  
+  return [...enhancedSystemMessages, ...userMessages];
+}
+
+/**
+ * Helper function to handle API errors
+ * @param {Error} err - Error object
+ * @param {Object} res - Express response object
+ * @param {string} sessionId - Session ID
+ * @returns {boolean} - True if error was handled, false otherwise
+ */
+function handleApiError(err, res, sessionId) {
+  const errorResponseBase = { sessionId };
+  
+  // Handle credit errors
+  if (err.status === 402) {
+    console.log("OpenRouter credit error details:", err.message);
+    const tokenLimitMessage = err.message?.includes("tokens") 
+      ? "Try sending a shorter message or using a different model."
+      : "";
+    
+    res.status(402).json({
+      ...errorResponseBase,
+      error: "API credit limit exceeded",
+      reply: `Sorry, the AI service has reached its usage limit. ${tokenLimitMessage} Please try again later or contact the administrator.`
+    });
+    return true;
+  }
+  
+  // Handle rate limiting
+  if (err.status === 429) {
+    res.status(429).json({
+      ...errorResponseBase,
+      error: "Rate limit exceeded",
+      reply: "Sorry, we're receiving too many requests right now. Please wait a moment and try again."
+    });
+    return true;
+  }
+  
+  // Handle specific error messages from OpenRouter
+  if (err.error?.message) {
+    res.status(err.status || 500).json({
+      ...errorResponseBase,
+      error: err.error.message,
+      reply: "The AI service returned an error: " + err.error.message
+    });
+    return true;
+  }
+  
+  // Handle network errors
+  if (err.message === "API request timed out" || 
+      err.message?.includes("ECONNREFUSED") || 
+      err.message?.includes("network") ||
+      err.code === 'ENOTFOUND') {
+    console.error("Network error details:", err);
+    res.status(503).json({
+      ...errorResponseBase,
+      error: "Connection error",
+      reply: "Sorry, I couldn't connect to the AI service. Please try again in a moment."
+    });
+    return true;
+  }
+  
+  return false;
+}
 
 /**
  * Process a chat message with optional file attachment
  * POST /api/chat
  */
-router.post('/chat', (req, res, next) => {
+router.post('/chat', (req, res) => {
   upload.single('file')(req, res, async (err) => {
-    if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        console.error("File too large:", err);
-        return res.status(413).json({ 
-          error: "File too large", 
-          reply: `File size exceeds the maximum allowed size of ${Math.round(config.uploads.maxFileSize / (1024 * 1024))} MB.`,
-          sessionId: req.body.sessionId || uuidv4()
-        });
-      }
-      // Handle other multer errors
-      console.error("File upload error:", err);
-      return res.status(400).json({
-        error: "File upload error",
-        reply: "There was an error uploading your file. Please try again.",
-        sessionId: req.body.sessionId || uuidv4()
-      });
-    }
+    const sessionId = req.body.sessionId || uuidv4();
     
-    // No errors, proceed with the route handler
+    if (handleUploadError(err, res, sessionId)) return;
+    
     try {
       console.log("Request received:", req.body);
       let userMessage = req.body.message || '';
-      const sessionId = req.body.sessionId || uuidv4(); // Use provided session ID or generate a new one
       const file = req.file;
 
+      // Process uploaded file if present
       if (file) {
-        console.log("File received:", file.originalname, file.mimetype);
-        const type = file.mimetype;
-        try {
-          if (isSupportedImageFormat(type)) {
-            const text = await extractTextFromImage(file.path);
-            userMessage += `\n\nExtracted from image: ${text}`;
-          } else if (type === 'application/pdf') {
-            const text = await extractTextFromPDF(file.path);
-            userMessage += `\n\nExtracted from PDF: ${text}`;
-          } else if (
-            type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          ) {
-            const text = await extractTextFromDocx(file.path);
-            userMessage += `\n\nExtracted from Word File: ${text}`;
-          }
-        } catch (fileErr) {
-          console.error("File processing error:", fileErr);
-          // Continue with just the text message if file processing fails
-        }
+        userMessage += await processUploadedFile(file);
       }
 
       if (!userMessage.trim()) {
         return res.status(400).json({ 
           error: "No message provided", 
           reply: "Please provide a message to chat with the AI.",
-          sessionId: sessionId 
+          sessionId 
         });
       }
 
       console.log(`Processing user message for session: ${sessionId}`);
       
-      // Create user message object
-      const userMessageObj = { role: 'user', content: userMessage };
-      
-      // First, add the user message to history (before API call)
-      addMessageToHistory(sessionId, userMessageObj);
-      
-      // Now get properly formatted messages for the API call including system message
+      // Add user message to history and get formatted conversation
+      addMessageToHistory(sessionId, { role: 'user', content: userMessage });
       let messages = getFormattedConversationMessages(sessionId);
       
-      // Log the message count being sent to AI
-      console.log(`Sending ${messages.length} messages to AI (including system message)`);
-      // Log first few characters of each message for debugging
-      if (Array.isArray(messages)) {
-        messages.forEach((msg, i) => {
-          if (msg && msg.role && typeof msg.content === 'string') {
-            console.log(`Message ${i} (${msg.role}): ${msg.content.substring(0, 50)}...`);
-          } else {
-            console.warn(`Message ${i} has invalid format:`, msg);
-          }
-        });
-      } else {
+      // Validate messages format
+      if (!Array.isArray(messages)) {
         console.error('Messages is not an array:', messages);
-        // Create a valid messages array with just the user message as fallback
-        messages = [ // Using direct assignment since messages is now let instead of const
+        messages = [
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: userMessage }
         ];
       }
-
-      console.log(`Sending message to OpenAI (Session: ${sessionId}):`, userMessage.slice(0, 100) + "...");
-      console.log(`Conversation history length: ${messages.length - 1} messages`); // Subtract 1 to exclude system message
       
       // Check if API key is available
       if (!config.openRouter.apiKey) {
@@ -141,67 +233,42 @@ router.post('/chat', (req, res, next) => {
         return res.status(500).json({ 
           error: "Missing API configuration", 
           reply: "Server configuration error: API key is missing.",
-          sessionId: sessionId 
+          sessionId 
         });
       }
 
-      // Define model fallback sequence from most capable to least capable
-      // Use environment variables if available, otherwise use hardcoded defaults
-      const defaultModel = process.env.DEFAULT_MODEL || AI_MODELS.GPT4O;
-      const fallbackModel = process.env.FALLBACK_MODEL || AI_MODELS.CLAUDE3HAIKU;
-      const backupModel = process.env.BACKUP_MODEL || AI_MODELS.MISTRAL;
-      
+      // Define model fallback sequence
       const modelFallbackSequence = [
-        defaultModel,      // First try default model (GPT-4o)
-        fallbackModel,     // Then fallback model (Claude 3 Haiku)
-        AI_MODELS.GPT35TURBO, // Then GPT-3.5 Turbo
-        backupModel,       // Then backup model (Mistral)
-        AI_MODELS.GEMMA,   // Then Gemma (lower cost)
-        AI_MODELS.LLAMA3   // Finally Llama 3 (lower cost)
+        process.env.DEFAULT_MODEL || AI_MODELS.GPT4O,
+        process.env.FALLBACK_MODEL || AI_MODELS.CLAUDE3HAIKU,
+        AI_MODELS.GPT35TURBO,
+        process.env.BACKUP_MODEL || AI_MODELS.MISTRAL,
+        AI_MODELS.GEMMA,
+        AI_MODELS.LLAMA3
       ];
       
       let modelIndex = 0;
       let modelToUse = modelFallbackSequence[modelIndex];
       let completion;
-      
-      // Set a timeout for the API call - 45 seconds (balanced timeout)
       const apiTimeout = 45000;
-      
-      // Set maximum retry attempts per model
       const maxRetries = 1;
       let retryCount = 0;
       
+      // Prepare enhanced messages
+      const enhancedMessages = prepareEnhancedMessages(messages);
+      
+      // Try models with fallback logic
       while (retryCount <= maxRetries) {
         try {
           console.log(`Attempting to use ${modelToUse} model... (Attempt ${retryCount + 1}/${maxRetries + 1})`);
           
-          // Create a promise that resolves with the API response or rejects after timeout
-          // Prepare messages with formatting instructions
-          const formattingInstructions = responseFormatter.getFormattingInstructions();
-          
-          // Get all system messages except the last one
-          const systemMessages = messages.filter(msg => msg.role === 'system');
-          const userMessages = messages.filter(msg => msg.role !== 'system');
-          
-          // Enhance the system messages with formatting instructions
-          const enhancedSystemMessages = [
-            ...systemMessages,
-            {
-              role: 'system',
-              content: formattingInstructions
-            }
-          ];
-          
-          // Combine systems messages with user messages
-          const enhancedMessages = [...enhancedSystemMessages, ...userMessages];
-          
-          // Get model-specific settings
+          // Get model settings and calculate appropriate token limit
           const modelSettings = getModelSettings(modelToUse);
-          
-          // Dynamically calculate the appropriate max_tokens value based on message length
           const dynamicMaxTokens = calculateMaxTokens(enhancedMessages, modelSettings.maxTokens);
-          console.log(`Calculated dynamic max_tokens: ${dynamicMaxTokens} for regular chat request`);
           
+          console.log(`Calculated dynamic max_tokens: ${dynamicMaxTokens} for chat request`);
+          
+          // Create API call with timeout
           const apiPromise = Promise.race([
             openai.chat.completions.create({
               model: modelToUse,
@@ -217,176 +284,86 @@ router.post('/chat', (req, res, next) => {
           ]);
           
           completion = await apiPromise;
-          
           console.log(`Successfully received response from ${modelToUse}`);
-          // If we get here, the request was successful
           break;
         } catch (modelError) {
           console.error(`Error with ${modelToUse} (Attempt ${retryCount + 1}/${maxRetries + 1}):`, modelError.message);
           
-          // If this is a timeout error and we haven't exceeded max retries, try again with same model
+          // Retry same model on timeout
           if (modelError.message === "API request timed out" && retryCount < maxRetries) {
-            console.log(`Retrying with ${modelToUse} after timeout...`);
             retryCount++;
             continue;
           }
           
-          // If this is our last retry or a different error, try switching models
+          // Try next model on other errors
           if (retryCount >= maxRetries || modelError.status === 402 || modelError.status === 404 || modelError.status >= 500) {
-            retryCount = 0; // Reset retry count when switching models
-            modelIndex++; // Move to next model in the fallback sequence
+            retryCount = 0;
+            modelIndex++;
             
-            // If we've already tried all models, throw the error
             if (modelIndex >= modelFallbackSequence.length) {
               console.error(`All models failed after retries`);
               throw modelError;
             }
             
-            // Switch to the next model
             modelToUse = modelFallbackSequence[modelIndex];
             console.log(`Switching to next model: ${modelToUse}`);
-            
-            // Log specific messages based on error type
-            if (modelError.status === 402) {
-              console.log(`Credit error detected! Falling back to ${modelToUse} to save credits.`);
-            } else if (modelError.status === 404) {
-              console.log(`Model not found error. Trying ${modelToUse} instead.`);
-            } else {
-              console.log(`Error with previous model. Falling back to ${modelToUse}.`);
-            }
-            
-            // Reset retry count for the new model - already done above
             continue;
           }
           
-          // If we get here, it's a non-recoverable error
-          console.error(`Critical error with model, not retrying:`, modelError);
+          console.error(`Critical error with model:`, modelError);
           throw modelError;
         }
       }
 
-      // Safely extract the AI's reply
+      // Extract and process AI's reply
       let aiReply = '';
       
-      if (completion && 
-          completion.choices && 
-          completion.choices[0] && 
-          completion.choices[0].message && 
-          completion.choices[0].message.content) {
-        // Get the raw response content
-        let rawReply = completion.choices[0].message.content.trim();
-        
-        // Enhance the response formatting
-        aiReply = responseFormatter.enhanceResponse(rawReply);
-        
+      if (completion?.choices?.[0]?.message?.content) {
+        aiReply = responseFormatter.enhanceResponse(completion.choices[0].message.content.trim());
         console.log(`Response received (${aiReply.length} chars): "${aiReply.substring(0, 50)}..."`);
       } else {
         console.error("Unexpected response format:", JSON.stringify(completion));
         aiReply = "I apologize, but I couldn't generate a proper response. Please try again.";
       }
       
-      // Add AI's reply to conversation history
+      // Add AI's reply to history
       addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
-      
-      // Get history length excluding system message
-      const historyLength = getConversationHistory(sessionId).length;
       
       // Send response to client
       res.json({ 
         reply: aiReply,
-        sessionId: sessionId,
-        historyLength: historyLength,
+        sessionId,
+        historyLength: getConversationHistory(sessionId).length,
         model: modelToUse
       });
-          // Clean up the file after processing
-    if (file && file.path) {
-      try {
-        const fileStillExists = await fileExists(file.path);
-        if (fileStillExists) {
-          fs.unlinkSync(file.path);
-          console.log(`Cleaned up file: ${file.path}`);
-        }
-      } catch (cleanupError) {
-        console.error("Error cleaning up file:", cleanupError);
-        // Continue execution, file cleanup is not critical
-      }
-    }
+      
+      // Clean up file asynchronously
+      if (file) cleanUpFile(file);
+      
     } catch (err) {
       console.error("API Error:", err);
       
-      // Get the sessionId from the request or use a fallback
-      const errorSessionId = req.body.sessionId || 'error-session';
-      
-      // Include the session ID in all error responses
-      const errorResponseBase = {
-        sessionId: errorSessionId
-      };
-      
-      // Handle specific OpenRouter credit errors
-      if (err.status === 402) {
-        console.log("OpenRouter credit error details:", err.message);
-        
-        // Check if the error contains specific information about tokens
-        const tokenLimitMessage = err.message && err.message.includes("tokens") 
-          ? "Try sending a shorter message or using a different model."
-          : "";
-        
-        return res.status(402).json({
-          ...errorResponseBase,
-          error: "API credit limit exceeded",
-          reply: `Sorry, the AI service has reached its usage limit. ${tokenLimitMessage} Please try again later or contact the administrator.`
-        });
-      }
-      
-      // Handle rate limiting errors
-      if (err.status === 429) {
-        return res.status(429).json({
-          ...errorResponseBase,
-          error: "Rate limit exceeded",
-          reply: "Sorry, we're receiving too many requests right now. Please wait a moment and try again."
-        });
-      }
-      
-      // If the error has a specific message from OpenRouter
-      if (err.error && err.error.message) {
-        return res.status(err.status || 500).json({
-          ...errorResponseBase,
-          error: err.error.message,
-          reply: "The AI service returned an error: " + err.error.message
-        });
-      }
-      
-      // Handle network errors
-      if (err.message === "API request timed out" || 
-          err.message.includes("ECONNREFUSED") || 
-          err.message.includes("network") ||
-          err.code === 'ENOTFOUND') {
-        console.error("Network error details:", err);
-        return res.status(503).json({
-          ...errorResponseBase,
-          error: "Connection error",
-          reply: "Sorry, I couldn't connect to the AI service. Please try again in a moment. If the problem persists, please try a shorter message or try again later."
-        });
-      }
-      
-      // Try to extract more error details
-      let errorDetails = '';
-      if (err.response?.data) {
+      // Handle specific API errors
+      if (!handleApiError(err, res, sessionId || 'error-session')) {
+        // General error handling for unhandled errors
+        let errorDetails = '';
         try {
-          errorDetails = JSON.stringify(err.response.data);
+          errorDetails = err.response?.data ? JSON.stringify(err.response.data) : '';
         } catch (_) {
           errorDetails = 'Unable to stringify error data';
         }
+        
+        console.error("Error details:", errorDetails || 'No additional details');
+        
+        res.status(500).json({
+          sessionId: sessionId || 'error-session',
+          error: err.message || "Unknown error",
+          reply: "Sorry, I encountered an error processing your request. Please try again with a simpler question."
+        });
       }
       
-      console.error("Error details:", errorDetails || 'No additional details');
-      
-      // General error handling
-      res.status(500).json({
-        ...errorResponseBase,
-        error: err.message || "Unknown error",
-        reply: "Sorry, I encountered an error processing your request. Please try again with a simpler question."
-      });
+      // Clean up file even on error
+      if (req.file) cleanUpFile(req.file);
     }
   });
 });
@@ -397,110 +374,20 @@ router.post('/chat', (req, res, next) => {
  */
 router.post('/chat/stream', (req, res) => {
   upload.single('file')(req, res, async (err) => {
-    if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        console.error("File too large in stream endpoint:", err);
-        return res.status(413).json({ 
-          error: "File too large", 
-          reply: `File size exceeds the maximum allowed size of ${Math.round(config.uploads.maxFileSize / (1024 * 1024))} MB.`,
-          sessionId: req.body.sessionId || uuidv4()
-        });
-      }
-      // Handle other multer errors
-      console.error("File upload error in stream endpoint:", err);
-      return res.status(400).json({
-        error: "File upload error",
-        reply: "There was an error uploading your file. Please try again.",
-        sessionId: req.body.sessionId || uuidv4()
-      });
-    }
+    const sessionId = req.body.sessionId || uuidv4();
     
-  try {
-    console.log("Stream request received:", req.body);
-    let userMessage = req.body.message || '';
-    const sessionId = req.body.sessionId || uuidv4(); // Use provided session ID or generate a new one
-    const file = req.file;
-
-    if (file) {
-      console.log("File received:", file.originalname, file.mimetype);
-      const type = file.mimetype;
-      try {
-        if (isSupportedImageFormat(type)) {
-          const text = await extractTextFromImage(file.path);
-          userMessage += `\n\nExtracted from image: ${text}`;
-        } else if (type === 'application/pdf') {
-          const text = await extractTextFromPDF(file.path);
-          userMessage += `\n\nExtracted from PDF: ${text}`;
-        } else if (
-          type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ) {
-          const text = await extractTextFromDocx(file.path);
-          userMessage += `\n\nExtracted from Word File: ${text}`;
-        }
-      } catch (fileErr) {
-        console.error("File processing error:", fileErr);
-        // Continue with just the text message if file processing fails
-      }
-    }
-
-    if (!userMessage.trim()) {
-      return res.status(400).json({ 
-        error: "No message provided", 
-        reply: "Please provide a message to chat with the AI.",
-        sessionId: sessionId 
-      });
-    }
-
-    console.log(`Processing user message for stream session: ${sessionId}`);
+    // Handle file upload errors
+    if (handleUploadError(err, res, sessionId)) return;
     
-    // Create user message object
-    const userMessageObj = { role: 'user', content: userMessage };
-    
-    // First, add the user message to history (before API call)
-    addMessageToHistory(sessionId, userMessageObj);
-    
-    // Now get properly formatted messages for the API call including system message
-    let messages = getFormattedConversationMessages(sessionId);
-    
-    // Declare enhancedMessages at a higher scope so it's available in catch blocks
-    let enhancedMessages;
-    
-    // Check if API key is available
-    if (!config.openRouter.apiKey) {
-      console.error("Missing API key");
-      return res.status(500).json({ 
-        error: "Missing API configuration", 
-        reply: "Server configuration error: API key is missing.",
-        sessionId: sessionId 
-      });
-    }
-
-    // Set up Server-Sent Events
+    // Set up Server-Sent Events headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
-
-    // Define model fallback sequence for streaming, similar to regular chat endpoint
-    const defaultStreamModel = process.env.DEFAULT_STREAM_MODEL || AI_MODELS.GPT4O;
-    const fallbackStreamModel = process.env.FALLBACK_STREAM_MODEL || AI_MODELS.CLAUDE3HAIKU;
     
-    const streamModelFallbackSequence = [
-      defaultStreamModel,        // First try default model (GPT-4o)
-      fallbackStreamModel,       // Then fallback model (Claude 3 Haiku)
-      AI_MODELS.GPT35TURBO       // Finally GPT-3.5 Turbo as most reliable
-    ];
-    
-    let modelIndex = 0;
-    let modelToUse = streamModelFallbackSequence[modelIndex];
-    let aiReply = '';
-    let lineBuffer = '';
-    let retryCount = 0;
-    const maxStreamRetries = 1;
-    
-    // Set a timeout for the API call - 60 seconds
+    // Set a timeout for the API call
     const apiTimeout = 60000;
-    let streamTimeout = setTimeout(() => { // Changed from const to let so it's accessible in the catch block
+    let streamTimeout = setTimeout(() => {
       console.error("Stream request timed out");
       res.write(`data: ${JSON.stringify({ 
         error: "API request timed out",
@@ -510,244 +397,230 @@ router.post('/chat/stream', (req, res) => {
     }, apiTimeout);
     
     try {
-      console.log(`Attempting to stream from ${modelToUse} model...`);
+      console.log("Stream request received:", req.body);
+      let userMessage = req.body.message || '';
+      const file = req.file;
+
+      // Process the uploaded file
+      if (file) {
+        userMessage += await processUploadedFile(file);
+      }
+
+      if (!userMessage.trim()) {
+        clearTimeout(streamTimeout);
+        return res.status(400).json({ 
+          error: "No message provided", 
+          reply: "Please provide a message to chat with the AI.",
+          sessionId
+        });
+      }
+
+      console.log(`Processing user message for stream session: ${sessionId}`);
       
-      // Dynamically calculate the appropriate max_tokens value based on message length
-      const dynamicMaxTokens = calculateMaxTokens(messages, 800);
-      console.log(`Calculated dynamic max_tokens: ${dynamicMaxTokens} for stream request`);
+      // Add user message to history
+      addMessageToHistory(sessionId, { role: 'user', content: userMessage });
       
-      // Add response formatting instructions to messages for consistent output
-      const formattingInstructions = responseFormatter.getFormattingInstructions();
+      // Get formatted conversation
+      let messages = getFormattedConversationMessages(sessionId);
       
-      // Get all system messages except the last one
-      const systemMessages = messages.filter(msg => msg.role === 'system');
-      const userMessages = messages.filter(msg => msg.role !== 'system');
-      
-      // Enhance the system messages with formatting instructions
-      const enhancedSystemMessages = [
-        ...systemMessages,
-        {
-          role: 'system',
-          content: formattingInstructions
-        }
+      // Check API key
+      if (!config.openRouter.apiKey) {
+        clearTimeout(streamTimeout);
+        console.error("Missing API key");
+        return res.status(500).json({ 
+          error: "Missing API configuration", 
+          reply: "Server configuration error: API key is missing.",
+          sessionId
+        });
+      }
+
+      // Define model fallback sequence - simplified
+      const streamModelFallbackSequence = [
+        process.env.DEFAULT_STREAM_MODEL || AI_MODELS.GPT4O,
+        process.env.FALLBACK_STREAM_MODEL || AI_MODELS.CLAUDE3HAIKU,
+        AI_MODELS.GPT35TURBO
       ];
       
-      // Combine systems messages with user messages
-      enhancedMessages = [...enhancedSystemMessages, ...userMessages];
+      let modelIndex = 0;
+      let modelToUse = streamModelFallbackSequence[modelIndex];
+      let aiReply = '';
       
-      // Get model-specific settings
-      const modelSettings = getModelSettings(modelToUse);
+      // Prepare enhanced messages
+      const enhancedMessages = prepareEnhancedMessages(messages);
       
-      const stream = await openai.chat.completions.create({
-        model: modelToUse,
-        messages: enhancedMessages,
-        max_tokens: dynamicMaxTokens,
-        temperature: modelSettings.temperature || 0.7,
-        presence_penalty: modelSettings.presencePenalty || 0.3,
-        frequency_penalty: modelSettings.frequencyPenalty || 0.3,
-        stream: true,
-      });
-      
-      // Clear the timeout as we got a response
-      clearTimeout(streamTimeout);
-
-      // Send events for each chunk - optimized for word-by-word streaming
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        if (content) {
-          aiReply += content;
-          
-          // Send each chunk immediately for smoother word-by-word streaming
-          res.write(`data: ${JSON.stringify({ content: content })}\n\n`);
-        }
-      }
-      
-      // No need to handle remaining buffer since we're sending each chunk immediately
-      // Signal completion
-      
-      // Add the complete AI message to history once streaming is complete
-      addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
-
-      // Send end event
-      res.write(`data: ${JSON.stringify({ done: true, sessionId, model: modelToUse })}\n\n`);
-      res.end();
-      
-    } catch (streamError) {
-      console.error(`Streaming error with ${modelToUse}:`, streamError.message);
-      // Clear the timeout to prevent double-sending errors
-      clearTimeout(streamTimeout);
-      
-      // Try next model in fallback sequence
-      modelIndex++;
-      retryCount = 0;
-      
-      // If we still have models to try in the sequence
-      if (modelIndex < streamModelFallbackSequence.length) {
-        modelToUse = streamModelFallbackSequence[modelIndex];
-        console.log(`Stream error occurred. Trying next model in sequence: ${modelToUse}`);
+      // First attempt with primary model
+      try {
+        console.log(`Attempting to stream from ${modelToUse} model...`);
         
-        // Specific log message based on error type
-        if (streamError.status === 402) {
-          console.log(`Credit error detected! Falling back to ${modelToUse} to save credits.`);
-        } else if (streamError.status === 404) {
-          console.log(`Model not found error. Trying ${modelToUse} instead.`);
-        } else {
-          console.log(`Error with previous model. Falling back to ${modelToUse}.`);
-        }
+        // Calculate appropriate token limit
+        const modelSettings = getModelSettings(modelToUse);
+        const dynamicMaxTokens = calculateMaxTokens(messages, 800);
         
-        try {
-          // Set model-specific settings for the fallback model
-          const modelSettings = getModelSettings(modelToUse);
-          // Use a more conservative token limit for fallbacks to ensure reliability
-          const fallbackMaxTokens = Math.min(500, modelSettings.maxTokens || 500);
-          
-          console.log(`Attempting fallback to ${modelToUse} with max_tokens=${fallbackMaxTokens}...`);
-          
-          // Use the enhanced messages with formatting instructions
-          const fallbackStream = await openai.chat.completions.create({
-            model: modelToUse,
-            messages: enhancedMessages, // Use enhanced messages with formatting instructions
-            max_tokens: fallbackMaxTokens,
-            temperature: modelSettings.temperature || 0.7,
-            presence_penalty: modelSettings.presencePenalty || 0.3,
-            frequency_penalty: modelSettings.frequencyPenalty || 0.3,
-            stream: true,
-          });
-          
-          aiReply = '';
-          // Process the fallback stream
-          for await (const chunk of fallbackStream) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-              aiReply += content;
-              res.write(`data: ${JSON.stringify({ content: content })}\n\n`);
-            }
+        console.log(`Calculated max_tokens: ${dynamicMaxTokens} for stream`);
+        
+        // Create the streaming request
+        const stream = await openai.chat.completions.create({
+          model: modelToUse,
+          messages: enhancedMessages,
+          max_tokens: dynamicMaxTokens,
+          temperature: modelSettings.temperature || 0.7,
+          presence_penalty: modelSettings.presencePenalty || 0.3,
+          frequency_penalty: modelSettings.frequencyPenalty || 0.3,
+          stream: true,
+        });
+        
+        // Clear the timeout as we got a response
+        clearTimeout(streamTimeout);
+
+        // Process the stream
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            aiReply += content;
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
-          
-          // Add to history and end the stream
-          addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
+        }
+        
+        // Add to history and send completion
+        addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
+        res.write(`data: ${JSON.stringify({ done: true, sessionId, model: modelToUse })}\n\n`);
+        res.end();
+        
+      } catch (streamError) {
+        console.error(`Streaming error with ${modelToUse}:`, streamError.message);
+        clearTimeout(streamTimeout);
+        
+        // Handle auth errors specifically
+        if (streamError.status === 401 || streamError.message?.includes('auth')) {
+          console.error("\x1b[31m%s\x1b[0m", "AUTHENTICATION ERROR: Check API key in .env file");
           res.write(`data: ${JSON.stringify({ 
-            done: true, 
-            sessionId, 
-            model: modelToUse,
-            note: "Fallback model used"
+            error: "Authentication failed",
+            errorType: "auth",
+            done: true 
           })}\n\n`);
           res.end();
           return;
-        } catch (fallbackError) {
-          console.error(`Fallback to ${modelToUse} also failed:`, fallbackError.message);
-          // Continue to try next model if available
-          if (modelIndex + 1 < streamModelFallbackSequence.length) {
-            modelIndex++;
-            modelToUse = streamModelFallbackSequence[modelIndex];
-            // Try one final model (usually GPT-3.5 Turbo) as last resort
+        }
+        
+        // Try fallback model
+        modelIndex++;
+        if (modelIndex < streamModelFallbackSequence.length) {
+          modelToUse = streamModelFallbackSequence[modelIndex];
+          console.log(`Trying fallback model: ${modelToUse}`);
+          
+          try {
+            // More conservative settings for fallback
+            const modelSettings = getModelSettings(modelToUse);
+            const fallbackMaxTokens = Math.min(500, modelSettings.maxTokens || 500);
+            
+            const fallbackStream = await openai.chat.completions.create({
+              model: modelToUse,
+              messages: enhancedMessages,
+              max_tokens: fallbackMaxTokens,
+              temperature: modelSettings.temperature || 0.7,
+              presence_penalty: modelSettings.presencePenalty || 0.3,
+              frequency_penalty: modelSettings.frequencyPenalty || 0.3,
+              stream: true,
+            });
+            
+            aiReply = '';
+            for await (const chunk of fallbackStream) {
+              const content = chunk.choices[0]?.delta?.content || '';
+              if (content) {
+                aiReply += content;
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            }
+            
+            addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
+            res.write(`data: ${JSON.stringify({ 
+              done: true, 
+              sessionId, 
+              model: modelToUse,
+              note: "Fallback model used"
+            })}\n\n`);
+            res.end();
+            return;
+          } catch (fallbackError) {
+            // Last resort fallback
+            const lastFallbackModel = AI_MODELS.GPT35TURBO;
+            console.log(`Trying emergency fallback model ${lastFallbackModel}...`);
+            
             try {
-              console.log(`Trying final fallback model ${modelToUse}...`);
-              const lastResortMaxTokens = 400; // Very conservative for last resort
-              
-              // Create a simplified set of messages for the last resort attempt
               const simplifiedMessages = [
                 { role: 'system', content: 'You are a helpful assistant.' },
                 ...messages.filter(msg => msg.role === 'user')
               ];
               
               const lastResortStream = await openai.chat.completions.create({
-                model: modelToUse,
-                messages: simplifiedMessages, // Use simplified messages for better compatibility
-                max_tokens: lastResortMaxTokens,
+                model: lastFallbackModel,
+                messages: simplifiedMessages,
+                max_tokens: 400,
                 temperature: 0.5,
                 stream: true,
               });
               
               aiReply = '';
-              // Process the last resort stream
               for await (const chunk of lastResortStream) {
                 const content = chunk.choices[0]?.delta?.content || '';
                 if (content) {
                   aiReply += content;
-                  res.write(`data: ${JSON.stringify({ content: content })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ content })}\n\n`);
                 }
               }
               
-              // Add to history and end the stream
               addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
               res.write(`data: ${JSON.stringify({ 
                 done: true, 
                 sessionId, 
-                model: modelToUse,
-                note: "Emergency fallback model used"
+                model: lastFallbackModel,
+                note: "Emergency fallback"
               })}\n\n`);
               res.end();
               return;
             } catch (finalError) {
-              console.error("All fallback models failed:", finalError.message);
+              console.error("All fallbacks failed:", finalError.message);
             }
           }
         }
+        
+        // All models failed - send static fallback response
+        const fallbackResponse = "I'm sorry, I couldn't process your request at this moment. Please try again with a shorter or different question.";
+        addMessageToHistory(sessionId, { role: 'assistant', content: fallbackResponse });
+        res.write(`data: ${JSON.stringify({ content: fallbackResponse })}\n\n`);
+        res.write(`data: ${JSON.stringify({ 
+          done: true,
+          errorType: streamError.status === 402 ? "credit_error" : "general_error",
+          note: "Static fallback"
+        })}\n\n`);
+        res.end();
       }
       
-      // If we get here, all fallbacks failed
-      let errorMessage = "All available AI models failed to respond. Please try again with a shorter message.";
-      let errorType = streamError.status === 402 ? "credit_error" : "general_error";
+      // Clean up file regardless of outcome
+      if (file) await cleanUpFile(file);
       
-      // Create a simple AI response instead of showing a technical error
-      const fallbackResponse = "I'm sorry, I couldn't process your request at this moment. Please try again or consider asking a shorter or different question.";
+    } catch (err) {
+      console.error("Stream API Error:", err);
       
-      // Add a basic error response to history
-      addMessageToHistory(sessionId, { role: 'assistant', content: fallbackResponse });
+      // Clear timeout
+      clearTimeout(streamTimeout);
       
-      // Send the fallback content as a normal response chunk
-      res.write(`data: ${JSON.stringify({ content: fallbackResponse })}\n\n`);
+      // User-friendly error message
+      const userErrorMessage = err.message === "API request timed out" ? "AI response timeout. Try a shorter message." :
+                              err.status === 429 ? "Too many requests. Please wait a moment." :
+                              err.status === 402 ? "AI service usage limit reached." :
+                              "Something went wrong. Please try again.";
       
-      // Then send the completion signal
       res.write(`data: ${JSON.stringify({ 
-        done: true,
-        errorType: errorType,
-        note: "Used static fallback response"
+        error: err.message || "Unknown error",
+        userMessage: userErrorMessage,
+        done: true
       })}\n\n`);
       res.end();
+      
+      // Clean up file on error
+      if (req.file) await cleanUpFile(req.file);
     }
-
-    // Clean up the file after processing
-    if (file && file.path) {
-      try {
-        const fileStillExists = await fileExists(file.path);
-        if (fileStillExists) {
-          fs.unlinkSync(file.path);
-          console.log(`Cleaned up file: ${file.path}`);
-        }
-      } catch (cleanupError) {
-        console.error("Error cleaning up file:", cleanupError);
-        // Continue execution, file cleanup is not critical
-      }
-    }
-    
-  } catch (err) {
-    console.error("API Error:", err);
-    
-    // Clear the timeout if it exists
-    if (typeof streamTimeout !== 'undefined') {
-      clearTimeout(streamTimeout);
-    }
-    
-    // Provide a more user-friendly error message
-    let userErrorMessage = "Something went wrong. Please try again.";
-    
-    if (err.message === "API request timed out") {
-      userErrorMessage = "The AI is taking too long to respond. Please try a shorter message.";
-    } else if (err.status === 429) {
-      userErrorMessage = "Too many requests. Please wait a moment and try again.";
-    } else if (err.status === 402) {
-      userErrorMessage = "The AI service has reached its usage limit. Please try again later.";
-    }
-    
-    res.write(`data: ${JSON.stringify({ 
-      error: err.message || "Unknown error",
-      userMessage: userErrorMessage,
-      done: true
-    })}\n\n`);
-    res.end();
-  }
   });
 });
 
@@ -769,6 +642,41 @@ router.delete('/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   clearConversationHistory(sessionId);
   res.json({ message: 'Chat history cleared', sessionId });
+});
+
+/**
+ * API health check and configuration test endpoint
+ * GET /api/health
+ */
+router.get('/health', async (req, res) => {
+  try {
+    // Check if API key exists and has the correct format
+    const apiKeyPresent = !!config.openRouter.apiKey;
+    const isValidFormat = apiKeyPresent && config.openRouter.apiKey.startsWith('sk-or-');
+    
+    if (!apiKeyPresent) {
+      console.warn("No API key configured in config.openRouter.apiKey");
+    } else if (!isValidFormat) {
+      console.warn("API key exists but format may not be correct (should start with 'sk-or-')");
+    }
+    
+    // Return health status
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      apiKeyPresent,
+      apiKeyValid: apiKeyPresent,
+      openrouterConnected: apiKeyPresent,
+      apiError: apiKeyPresent ? null : "API key is missing"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
 });
 
 export default router;

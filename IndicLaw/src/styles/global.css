@@ -8,8 +8,8 @@
   --background-color: hsl(0, 0%, 100%);
   --foreground-color: hsl(222.2, 84%, 4.9%);
   
-  /* Primary Colors - Legal Blue Theme */
-  --primary-color: hsl(215, 100%, 33%); /* #0055aa - Strong Blue */
+  /* Primary Colors - More Neutral Theme */
+  --primary-color: hsl(215, 25%, 27%); /* More muted slate-like color */
   --primary-foreground-color: hsl(210, 40%, 98%);
   
   /* Secondary Colors */
@@ -48,10 +48,10 @@
   --sidebar-border-color: hsl(220, 13%, 91%);
   
   /* Chat Elements */
-  --user-message-bg: hsla(215, 100%, 33%, 0.1);
+  --user-message-bg: hsla(215, 15%, 25%, 0.1);
   --ai-message-bg: hsl(0, 0%, 98%);
   --chat-input-bg: hsl(0, 0%, 100%);
-  --chat-input-border: hsl(214.3, 31.8%, 91.4%);
+  --chat-input-border: hsl(214.3, 20%, 91.4%);
 }
 
 /* Dark Mode */

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, parseISO } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -127,6 +128,8 @@ const Profile = () => {
     error,
     setError
   } = useAuth();
+  
+  const { t } = useTranslation();
   
   const [activeTab, setActiveTab] = useState('profile');
   const [isUploading, setIsUploading] = useState(false);

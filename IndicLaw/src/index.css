@@ -1,6 +1,7 @@
 /* Global CSS Import */
 @import url('./styles/global.css');
 @import url('./styles/animatedButton.css');
+@import url('./styles/sidebar.css');
 
 /* Tailwind Directives */
 @tailwind base;

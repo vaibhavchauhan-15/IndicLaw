@@ -1,6 +1,8 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Bot, User, FileText, Image as ImageIcon } from 'lucide-react';
 import { TypingEffect } from './TypingEffect';
+import { IndicLawLogo } from './IndicLawLogo';
+import { useTranslation } from 'react-i18next';
 
 export interface Message {
   id: string;
@@ -22,23 +24,35 @@ interface ChatMessageProps {
 
 export const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.sender === 'user';
+  const { t } = useTranslation();
 
   return (
     <div className={`flex gap-4 mb-6 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
-      <Avatar className="w-8 h-8 flex-shrink-0">
-        <AvatarFallback className={`${isUser ? 'bg-blue-600 text-white' : 'bg-primary text-primary-foreground'}`}>
-          {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-        </AvatarFallback>
+      <Avatar className={`w-8 h-8 flex-shrink-0 ${isUser ? '' : 'ring-2 ring-accent/30'}`}>
+        {isUser ? (
+          <AvatarFallback className="bg-slate-700 text-white">
+            <User className="w-4 h-4" />
+          </AvatarFallback>
+        ) : (
+          <AvatarFallback className="bg-slate-600 text-white flex items-center justify-center">
+            <Bot className="w-4 h-4" />
+          </AvatarFallback>
+        )}
       </Avatar>
 
       {/* Message Content */}
       <div className={`flex-1 max-w-3xl ${isUser ? 'text-right' : ''}`}>
-        <div className={`
-          inline-block p-4 rounded-lg w-auto
+        {/* Message sender label - only for assistant */}
+        {!isUser && (
+          <div className="flex items-center gap-1.5 mb-1 text-sm font-semibold text-slate-800">
+            <span>{t('chatbot_name')}</span>
+          </div>
+        )}          <div className={`
+          inline-block p-4 rounded-xl w-auto shadow-sm
           ${isUser 
-            ? 'bg-blue-600 text-white rounded-br-sm' 
-            : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+            ? 'bg-gradient-to-br from-slate-700 to-slate-800 text-white rounded-br-sm' 
+            : 'bg-white border border-gray-200 text-slate-900 rounded-bl-sm'
           }
           ${!isUser ? 'formatted-response' : ''}
         `}>
@@ -51,8 +65,8 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
                   className={`
                     flex items-center gap-2 p-2 rounded border
                     ${isUser 
-                      ? 'bg-blue-500 border-blue-400' 
-                      : 'bg-white border-gray-200'
+                      ? 'bg-slate-600 border-slate-500 text-white' 
+                      : 'bg-gray-50 border-gray-200 text-gray-800'
                     }
                   `}
                 >
@@ -80,7 +94,7 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
         </div>
         
         {/* Timestamp */}
-        <p className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
+        <p className={`text-xs text-slate-600 font-medium mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
           {message.timestamp}
         </p>
       </div>

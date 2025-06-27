@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji to Favicon</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 15px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .instructions {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Emoji to Favicon Generator</h1>
+    
+    <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Click "Generate Favicon" below</li>
+            <li>Right-click on the generated image and select "Save image as..."</li>
+            <li>Save the file as "favicon.ico" in your IndicLaw/public folder</li>
+        </ol>
+    </div>
+    
+    <div>
+        <h2>Scale of Justice Emoji: ⚖️</h2>
+        <canvas id="emojiCanvas" width="64" height="64"></canvas>
+        <br>
+        <button id="generateBtn">Generate Favicon</button>
+        <br>
+        <a id="downloadLink" style="display: none;">Download Favicon</a>
+    </div>
+    
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            const canvas = document.getElementById('emojiCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background (optional)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw emoji
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'black';
+            ctx.fillText('⚖️', canvas.width / 2, canvas.height / 2);
+            
+            // Create download link
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = canvas.toDataURL('image/png');
+            downloadLink.download = 'favicon.ico';
+            downloadLink.textContent = 'Download Favicon';
+            downloadLink.style.display = 'inline-block';
+        });
+    </script>
+</body>
+</html>

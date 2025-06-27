@@ -1,23 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bot } from 'lucide-react';
+import { Menu, Bot, FileUp, ChevronDown, Info, Shield, MoreHorizontal, Globe, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ChatSidebar } from '@/components/ChatSidebar';
+import { SidebarContent } from '@/components/SidebarContent';
 import { ChatMessage, Message } from '@/components/ChatMessage';
 import { ChatInput } from '@/components/ChatInput';
 import { TypingIndicator } from '@/components/TypingIndicator';
+import { IndicLawLogo } from '@/components/IndicLawLogo';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { API_CONFIG } from '@/lib/config';
+import { ApiStatusCheck } from '@/components/ApiStatusCheck';
+import LanguageSelector from '@/components/LanguageSelector';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 
 const API_BASE_URL = API_CONFIG.baseUrl;
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(() => {
+    // Get saved sidebar state from localStorage or default to true
+    const saved = localStorage.getItem('sidebarVisible');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { selectedLanguage } = useLanguage();
+  const { t, i18n } = useTranslation();
+
+  // Log language changes
+  useEffect(() => {
+    console.log(`Chat page current language: ${selectedLanguage} (${i18n.language})`);
+  }, [selectedLanguage, i18n.language]);
+
+  // Save sidebar visibility state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarVisible', JSON.stringify(sidebarVisible));
+  }, [sidebarVisible]);
 
   // Load session ID and chat history on component mount
   useEffect(() => {
@@ -31,15 +61,17 @@ const Index = () => {
       setSessionId(newSessionId);
       localStorage.setItem('chatSessionId', newSessionId);
       
-      // Add welcome message
+      // Use welcome message from translations
+      const welcomeMessage = t('chatbot.welcome');
+        
       setMessages([{
         id: '1',
-        content: 'Hello! I\'m your AI assistant. How can I help you today? Feel free to ask questions, upload documents or images, and I\'ll do my best to assist you.',
+        content: welcomeMessage,
         sender: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
     }
-  }, []);
+  }, [selectedLanguage]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -67,7 +99,7 @@ const Index = () => {
           // Add welcome message if history is empty
           setMessages([{
             id: '1',
-            content: 'Hello! I\'m your AI assistant. How can I help you today? Feel free to ask questions, upload documents or images, and I\'ll do my best to assist you.',
+            content: 'Hello! I\'m your INDICLAW AI assistant. How can I help you with legal questions today? Feel free to ask questions, upload documents or images, and I\'ll do my best to assist you.',
             sender: 'assistant',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }]);
@@ -218,8 +250,18 @@ const Index = () => {
                 }
                 
                 // If there was an error but we got some response content
-                if (data.error && !data.content) {
-                  toast.error(`Error: ${data.error}`);
+                if (data.error) {
+                  const errorMessage = data.error;
+                  let userFriendlyMessage = "Sorry, there was an error processing your request. Please try again with a shorter or different question.";
+                  
+                  // Handle authentication errors specifically
+                  if (data.errorType === "auth" || errorMessage.includes("auth credentials") || errorMessage.includes("401")) {
+                    userFriendlyMessage = "The AI service is currently unavailable due to authentication issues. Please contact the administrator to check the API key configuration.";
+                    toast.error("API authentication error", { duration: 5000 });
+                  } else {
+                    toast.error(`Error: ${errorMessage.substring(0, 50)}...`, { duration: 3000 });
+                  }
+                  
                   setIsTyping(false);
                   
                   // Update the message to show the error
@@ -228,7 +270,7 @@ const Index = () => {
                       if (msg.id === aiMessageId) {
                         return {
                           ...msg,
-                          content: "Sorry, there was an error processing your request. Please try again with a shorter or different question.",
+                          content: userFriendlyMessage,
                           isStreaming: false
                         };
                       }
@@ -333,10 +375,12 @@ const Index = () => {
         localStorage.setItem('chatSessionId', newSessionId);
         setSessionId(newSessionId);
         
-        // Reset messages with welcome message
+        // Reset messages with welcome message based on selected language
+        const welcomeMessage = t('chatbot.welcome');
+          
         setMessages([{
           id: '1',
-          content: 'Hello! I\'m your AI assistant. How can I help you today? Feel free to ask questions, upload documents or images, and I\'ll do my best to assist you.',
+          content: welcomeMessage,
           sender: 'assistant',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }]);
@@ -349,47 +393,21 @@ const Index = () => {
     }
   };
 
+  // Toggle sidebar visibility
+  const toggleSidebar = () => {
+    setSidebarVisible(prev => !prev);
+  };
+
   return (
-    <div className="flex h-screen bg-zinc-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar for desktop */}
-      <div className="w-64 border-r hidden lg:block bg-white shadow-sm">
-        <div className="flex flex-col h-full">
-          <div className="bg-primary p-4">
-            <h2 className="text-xl font-bold text-primary-foreground flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              AI Chatbot
-            </h2>
-            <Button 
-              variant="outline"
-              className="w-full mt-4 flex items-center justify-center gap-1 bg-white text-primary hover:bg-gray-100" 
-              onClick={handleClearConversation}
-            >
-              New Chat
-            </Button>
-          </div>
-          
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              <div className="text-sm">
-                <h3 className="font-medium mb-2">About this chatbot</h3>
-                <p className="text-muted-foreground">
-                  This AI assistant can help you with various tasks, answer questions, 
-                  and process uploaded documents and images for analysis.
-                </p>
-              </div>
-              
-              <div className="text-sm">
-                <h3 className="font-medium mb-2">Features</h3>
-                <ul className="text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Ask questions on any topic</li>
-                  <li>Upload and analyze PDFs, documents</li>
-                  <li>Process images with OCR</li>
-                  <li>Persistent conversation memory</li>
-                </ul>
-              </div>
-            </div>
-          </ScrollArea>
-        </div>
+      <div 
+        className={`w-72 border-r border-slate-200 ${sidebarVisible ? 'lg:block' : 'lg:hidden'} hidden bg-white shadow-md
+                   transition-all duration-300 ease-in-out transform ${sidebarVisible ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
+      >
+        <SidebarContent 
+          onClearConversation={handleClearConversation}
+        />
       </div>
 
       {/* Mobile sidebar */}
@@ -400,51 +418,142 @@ const Index = () => {
       />
 
       {/* Main chat area */}
-      <div className="flex flex-col w-full">
-        {/* Mobile header */}
-        <div className="flex items-center justify-between p-4 border-b lg:hidden bg-white">
-          <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="font-semibold text-lg flex items-center gap-2">
-            <Bot className="w-5 h-5" />
-            AI Chatbot
-          </h1>
-          <Button size="icon" variant="ghost" onClick={handleClearConversation}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12h18"></path>
-              <path d="M12 3v18"></path>
-            </svg>
+      <div className="flex flex-col w-full transition-all duration-300 ease-in-out">          {/* Main Chat Area */}
+        {/* Floating sidebar toggle button - appears when sidebar is hidden */}
+        <div 
+          className={`fixed left-0 top-1/2 transform -translate-y-1/2 z-30 transition-all duration-500 ease-in-out 
+                    ${sidebarVisible ? 'opacity-0 pointer-events-none translate-x-[-100%]' : 'opacity-100 translate-x-0'} 
+                    lg:block hidden`}
+        >
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-14 w-14 rounded-r-full rounded-l-none border-l-0 bg-white shadow-lg 
+                      hover:bg-blue-50 hover:text-blue-600 transition-all duration-300
+                      hover:shadow-xl border-slate-200 sidebar-toggle-pulse"
+            onClick={toggleSidebar}
+            aria-label="Show sidebar"
+          >
+            <ChevronRight className="h-6 w-6 transition-transform duration-300 hover:scale-125" />
           </Button>
         </div>
-
-        {/* Chat messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-          {messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center p-8">
-              <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold mb-2">Welcome to AI Chatbot</h2>
-                <p className="text-muted-foreground mb-4">
-                  Ask me anything or upload documents for analysis. I'm here to help with your legal questions.
-                </p>
+        
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Unified Chat Header - responsive for both mobile and desktop */}
+          <header className="p-4 border-b bg-white z-10 shadow-md">
+            <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Mobile menu button - hidden on large screens */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="lg:hidden text-slate-800 hover:bg-blue-50 hover:text-blue-600 
+                          transition-all duration-300 rounded-full" 
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu className="h-5 w-5 transition-transform duration-300 ease-in-out" />
+                </Button>
+                
+                {/* Sidebar toggle slider button - visible on all screens */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-slate-800 hover:bg-blue-50 hover:text-blue-600 
+                           transition-all duration-300 hidden lg:flex rounded-full"
+                  onClick={toggleSidebar}
+                  aria-label="Toggle sidebar"
+                  title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+                >
+                  {sidebarVisible ? (
+                    <ChevronLeft className="h-5 w-5 transform transition-transform duration-300 ease-in-out" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 transform transition-transform duration-300 ease-in-out" />
+                  )}
+                </Button>
+                
+                {/* Text logo with scales emoji in black background */}
+                <span className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                  <span className="bg-black text-amber-500 p-1 rounded-md flex items-center justify-center">⚖️</span> INDICLAW AI
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {/* Clear conversation button - visible only on mobile */}
+                <Button size="icon" variant="ghost" className="lg:hidden text-slate-800 hover:bg-slate-100" onClick={handleClearConversation}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12h18"></path>
+                    <path d="M12 3v18"></path>
+                  </svg>
+                </Button>
+                
+                {/* Language Selector */}
+                <div className="flex items-center gap-2 border border-slate-200 rounded-md px-2 py-1 bg-slate-50">
+                  <Globe className="w-4 h-4 text-slate-600" />
+                  <LanguageSelector className="!p-0" />
+                </div>
+                
+                {/* API Status Check Component */}
+                <ApiStatusCheck />
               </div>
             </div>
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-6 pb-20">
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
+          </header>
+
+          {/* Chat messages */}
+          <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
+            {messages.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8">
+                <div className="text-center max-w-md">
+                  <h2 className="text-2xl font-bold mb-2 text-slate-900">
+                    {t('chatbot.title')}
+                  </h2>
+                  <p className="text-slate-700 mb-4 font-medium">
+                    {t('chatbot.emptyState')}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 text-sm">
+                    <div className="bg-white p-3 rounded-lg border shadow-sm">
+                      <h3 className="font-semibold mb-1 text-slate-800">
+                        {t('chatbot.sidebar.title')}
+                      </h3>
+                      <p className="text-slate-600 text-xs">
+                        {t('features.multilingualChatbot.description')}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border shadow-sm">
+                      <h3 className="font-semibold mb-1 text-slate-800">
+                        {t('chatbot.sidebar.uploadTitle')}
+                      </h3>
+                      <p className="text-slate-600 text-xs">
+                        {t('features.documentAnalysis.description')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-3xl mx-auto space-y-6 pb-20">
+                {messages.map((message) => (
+                  <ChatMessage key={message.id} message={message} />
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          
+          {/* Input area - fixed at the bottom */}
+          <div className="border-t bg-slate-50 p-4 relative z-10 shadow-md">
+            <div className="max-w-3xl mx-auto">
+              <ChatInput 
+                onSendMessage={handleSendMessage} 
+                isLoading={isTyping}
+                placeholder="chatbot.placeholder"
+              />
+              <div className="mt-2 text-xs text-center text-slate-700">
+                <span className="inline-flex items-center font-medium">
+                  {selectedLanguage === 'Hindi' ? 'द्वारा संचालित' : 
+                   selectedLanguage === 'Marathi' ? 'द्वारे संचालित' :
+                   'Powered by'} <strong className="ml-1">INDICLAW AI</strong>
+                </span>
+              </div>
             </div>
-          )}
-        </ScrollArea>
-        
-        {/* Input area - fixed at the bottom */}
-        <div className="border-t bg-white p-4 relative z-10">
-          <div className="max-w-3xl mx-auto">
-            <ChatInput 
-              onSendMessage={handleSendMessage} 
-              isLoading={isTyping} 
-            />
           </div>
         </div>
       </div>

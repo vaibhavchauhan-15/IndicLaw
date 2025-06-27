@@ -93,6 +93,8 @@ const initializeOpenAI = () => {
   // Validate the API key
   if (!apiKey) {
     console.error("⚠️ OpenRouter API key is missing. Make sure to set OPENROUTER_API_KEY in your .env file");
+  } else if (!apiKey.startsWith('sk-or-')) {
+    console.error("⚠️ OpenRouter API key format appears to be invalid. It should start with 'sk-or-'");
   }
 
   // Default to 60 seconds timeout, but allow configuration through env variable

@@ -82,7 +82,8 @@
   },
   "language": {
     "change": "Change Language",
-    "current": "Current Language"
+    "current": "Current Language",
+    "select": "Select Language"
   },
   "chatbot": {
     "title": "AI Legal Assistant",
@@ -90,7 +91,73 @@
     "send": "Send",
     "uploadFile": "Upload Document",
     "startNewChat": "Start New Chat",
-    "welcome": "Hello! I'm your legal assistant. How can I help you today?"
+    "welcome": "Hello! I'm your legal assistant. How can I help you today?",
+    "emptyState": "Start a new conversation to get legal assistance in your preferred language.",
+    "typing": "AI is typing...",
+    "errorMessage": "An error occurred. Please try again.",
+    "networkError": "Network connection lost. Please check your internet connection.",
+    "fileUpload": {
+      "title": "Upload Document",
+      "dragDrop": "Drag and drop your files here",
+      "browse": "or browse files",
+      "maxSize": "Maximum file size: 10MB",
+      "formats": "Supported formats: PDF, DOCX, JPG, PNG",
+      "uploading": "Uploading...",
+      "success": "File uploaded successfully",
+      "error": "Error uploading file",
+      "tooLarge": "File is too large",
+      "invalidFormat": "Invalid file format",
+      "analyzingDocument": "Analyzing document...",
+      "documentSummary": "Document Summary"
+    },
+    "sidebar": {
+      "title": "Conversations",
+      "newChat": "New Chat",
+      "search": "Search conversations",
+      "noResults": "No conversations found",
+      "delete": "Delete conversation",
+      "confirmDelete": "Are you sure you want to delete this conversation?",
+      "yes": "Yes",
+      "no": "No",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "previousDays": "Previous Days"
+    },
+    "actionButtons": {
+      "copyToClipboard": "Copy to clipboard",
+      "copied": "Copied!",
+      "regenerateResponse": "Regenerate response",
+      "clearChat": "Clear chat",
+      "thumbsUp": "Helpful",
+      "thumbsDown": "Not helpful",
+      "share": "Share"
+    },
+    "accessibility": {
+      "sendButton": "Send message",
+      "attachButton": "Attach file",
+      "menuButton": "Menu",
+      "closeButton": "Close",
+      "copyButton": "Copy text",
+      "newChatButton": "Start new chat"
+    },
+    "messages": {
+      "systemWelcome": "Welcome to IndicLaw AI. How can I assist you with legal information today?",
+      "documentProcessing": "Your document is being processed. This may take a moment.",
+      "documentProcessed": "Document processed successfully. Here's what I found:",
+      "documentFailed": "There was an issue processing your document. Please try uploading it again.",
+      "longResponseWarning": "This response is quite lengthy. Would you like me to provide a summary instead?",
+      "sessionExpired": "Your session has expired. Please refresh to continue.",
+      "backendUnavailable": "Our service is currently experiencing issues. Please try again later."
+    },
+    "feedback": {
+      "title": "Feedback",
+      "prompt": "How was the assistant's response?",
+      "helpful": "Helpful",
+      "notHelpful": "Not helpful",
+      "comment": "Additional comments (optional)",
+      "submit": "Submit",
+      "thankYou": "Thank you for your feedback!"
+    }
   },
   "login": {
     "title": "Welcome Back",
@@ -156,6 +223,49 @@
       "password": "Password must be at least 6 characters",
       "confirmPassword": "Password confirmation must be at least 6 characters",
       "passwordsMatch": "Passwords must match"
+    }
+  },
+  "profile": {
+    "title": "Your Profile",
+    "personalInfo": "Personal Information",
+    "name": "Name",
+    "email": "Email",
+    "updateProfile": "Update Profile",
+    "password": "Password",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "preferences": {
+      "title": "Preferences",
+      "language": "Language",
+      "notifications": "Notifications",
+      "emailNotifications": "Email Notifications",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System Default"
+    },
+    "accountSettings": {
+      "title": "Account Settings",
+      "deleteAccount": "Delete Account",
+      "confirmDelete": "Are you sure you want to delete your account?",
+      "confirmText": "Type 'DELETE' to confirm",
+      "deleteWarning": "This action cannot be undone. All your data will be permanently deleted.",
+      "proceed": "Proceed"
+    },
+    "success": {
+      "profileUpdated": "Profile updated successfully",
+      "passwordChanged": "Password changed successfully",
+      "preferencesUpdated": "Preferences updated successfully"
+    },
+    "error": {
+      "updateFailed": "Failed to update profile",
+      "passwordChangeFailed": "Failed to change password",
+      "wrongPassword": "Current password is incorrect",
+      "deleteFailed": "Failed to delete account"
     }
   }
 }

@@ -13,6 +13,7 @@ IndicLaw AI is an intelligent chatbot system designed to provide legal informati
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [API Key Configuration](#api-key-configuration)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Multilingual Support](#multilingual-support)
@@ -108,10 +109,12 @@ npm install
 
 3. Create a `.env` file in the root directory with the following variables:
 ```
-PORT=3001
+PORT=5000
 NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-OPENAI_API_KEY=your_openai_api_key
+FRONTEND_URL=http://localhost:8080
+OPENROUTER_API_KEY=your_openrouter_api_key
+REFERER_URL=http://localhost:8080
+SITE_TITLE=IndicLaw AI
 ```
 
 4. Install frontend dependencies
@@ -119,6 +122,28 @@ OPENAI_API_KEY=your_openai_api_key
 cd ../IndicLaw
 npm install
 ```
+
+### API Key Configuration
+
+The application uses OpenRouter API to access various AI models including GPT-4o, Claude 3 Haiku, and more. Follow these steps to set up your API key:
+
+1. Create an account on [OpenRouter](https://openrouter.ai/)
+2. Generate an API key from your dashboard
+3. Add the API key to your `.env` file as `OPENROUTER_API_KEY`
+
+To verify your API key is working properly:
+```bash
+cd backend
+npm run test-api-key
+```
+
+This will test the API connection and confirm if your OpenRouter API key is valid and working properly.
+
+If you encounter a "401 No auth credentials found" error, try these troubleshooting steps:
+1. Check if your API key is correct in the `.env` file
+2. Ensure the API key starts with `sk-or-`
+3. Verify you have available credits in your OpenRouter account
+4. Generate a new API key from the OpenRouter dashboard if needed
 
 ## 🖥️ Usage
 

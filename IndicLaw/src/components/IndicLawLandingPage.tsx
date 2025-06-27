@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSelector from "./LanguageSelector";
 import AnimatedButton from "./AnimatedButton";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -81,12 +82,19 @@ const StepItem = memo(({ number, title, description, delay }: { number: string, 
 function IndicLawLandingPage() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { selectedLanguage, languageCode } = useLanguage();
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const pulseWaveContainerRef = useRef<HTMLDivElement>(null);
 
+  // Log language changes for debugging
+  useEffect(() => {
+    console.log(`Current language in IndicLawLandingPage: ${selectedLanguage} (${languageCode})`);
+    console.log(`i18n current language: ${i18n.language}`);
+  }, [selectedLanguage, languageCode, i18n.language]);
+  
   // Pulse wave animation setup
   useEffect(() => {
     let cleanupFunction: (() => void) | undefined;
@@ -183,7 +191,7 @@ function IndicLawLandingPage() {
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
               {/* Language Selector */}
-              <LanguageSelector isDarkTheme={false} />
+              <LanguageSelector isDarkTheme={false} showIcon={true} />
               
               {/* Authentication Links or User Profile */}
               {currentUser ? (
@@ -241,7 +249,7 @@ function IndicLawLandingPage() {
             
             {/* Language Selector for Mobile - Visible only on medium and smaller screens */}
             <div className="md:hidden">
-              <LanguageSelector isDarkTheme={false} iconOnly={true} />
+              <LanguageSelector isDarkTheme={false} iconOnly={true} showIcon={true} />
             </div>
             
             <NeuButton 

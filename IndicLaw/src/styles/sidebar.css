@@ -1,0 +1,57 @@
+/* Sidebar animation keyframes */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-in-out forwards;
+}
+
+.animate-slide-out-left {
+  animation: slideOutLeft 0.3s ease-in-out forwards;
+}
+
+/* Smooth hover transitions */
+.sidebar-item {
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  transform: translateX(4px);
+}
+
+/* Pulse animation for the toggle button */
+@keyframes pulse-blue {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.sidebar-toggle-pulse:not(:hover) {
+  animation: pulse-blue 2s infinite;
+}
