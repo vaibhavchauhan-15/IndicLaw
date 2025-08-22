@@ -20,6 +20,18 @@ export async function checkApiHealth(): Promise<{
   error?: string;
 }> {
   try {
+    // Try both endpoints for robustness
+    try {
+      // First try the root health endpoint
+      const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.log('Root health check failed, trying API endpoint...');
+    }
+    
+    // If root health endpoint fails, try the API health endpoint
     const response = await fetch(`${API_BASE_URL}/health`);
     if (!response.ok) {
       throw new Error(`API health check failed: ${response.status}`);

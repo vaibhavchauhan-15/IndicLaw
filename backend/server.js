@@ -12,11 +12,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Validate essential configuration
-if (!config.openRouter.apiKey) {
-  console.error("\x1b[31m%s\x1b[0m", "ERROR: OpenRouter API key is missing. Please set OPENROUTER_API_KEY in .env file");
+if (!config.ollama.host) {
+  console.error("\x1b[31m%s\x1b[0m", "ERROR: Ollama host is missing. Please set OLLAMA_HOST in .env file");
   console.error("The application will start, but AI requests will fail.");
-} else if (!config.openRouter.apiKey.startsWith('sk-or-')) {
-  console.error("\x1b[33m%s\x1b[0m", "WARNING: OpenRouter API key format appears invalid. Should start with 'sk-or-'");
 }
 
 const app = express();
@@ -30,6 +28,24 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Root health check endpoint 
+app.get('/health', (req, res) => {
+  // Check Ollama configuration
+  const ollamaHost = config.ollama?.host;
+  const ollamaConfigured = !!ollamaHost;
+  
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    environment: config.nodeEnv,
+    timestamp: new Date().toISOString(),
+    apiKeyPresent: ollamaConfigured, // Using the same field for compatibility with frontend
+    apiKeyValid: ollamaConfigured,   // Using the same field for compatibility with frontend
+    ollamaConfigured: ollamaConfigured,
+    ollamaHost: ollamaConfigured ? ollamaHost : null
+  });
+});
+
 // API routes
 app.use('/api', chatRoute);
 
@@ -38,16 +54,6 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    message: 'Server is running',
-    environment: config.nodeEnv,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Add error handling middleware last
 app.use(errorHandler);
@@ -59,11 +65,15 @@ app.listen(PORT, () => {
   console.log(`API available at http://localhost:${PORT}/api`);
   console.log(`Health check at http://localhost:${PORT}/health`);
   
-  // Display API key status
-  if (!config.openRouter.apiKey || config.openRouter.apiKey === 'your_new_api_key_here') {
-    console.error("\x1b[31m%s\x1b[0m", "⚠️ WARNING: No valid OpenRouter API key found!");
-    console.error("\x1b[33m%s\x1b[0m", "AI functionality will not work until you update the .env file with a valid API key.");
-    console.log("\x1b[36m%s\x1b[0m", "Visit https://openrouter.ai to create an account and generate an API key.");
-    console.log("\x1b[36m%s\x1b[0m", "Then update your .env file with: OPENROUTER_API_KEY=your_actual_api_key");
+  // Display Ollama status
+  if (!config.ollama.host) {
+    console.error("\x1b[31m%s\x1b[0m", "⚠️ WARNING: No valid Ollama host configuration found!");
+    console.error("\x1b[33m%s\x1b[0m", "AI functionality will not work until you update the .env file with a valid Ollama host.");
+    console.log("\x1b[36m%s\x1b[0m", "Make sure Ollama is installed and running. Default host is http://localhost:11434");
+    console.log("\x1b[36m%s\x1b[0m", "Then update your .env file with: OLLAMA_HOST=http://localhost:11434");
+  } else {
+    console.log("\x1b[32m%s\x1b[0m", "✅ Ollama configuration found!");
+    console.log("\x1b[36m%s\x1b[0m", `Using Ollama at: ${config.ollama.host}`);
+    console.log("\x1b[36m%s\x1b[0m", `Default model: ${config.ollama.defaultModel}`);
   }
 });

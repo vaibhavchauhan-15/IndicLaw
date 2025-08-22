@@ -35,11 +35,17 @@ const config = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
   
-  // OpenRouter API configuration
+  // OpenRouter API configuration (legacy)
   openRouter: {
     apiKey: process.env.OPENROUTER_API_KEY,
     refererUrl: process.env.REFERER_URL || 'http://localhost:3000',
     siteTitle: process.env.SITE_TITLE || 'AI Chatbot',
+  },
+  
+  // Ollama configuration
+  ollama: {
+    host: process.env.OLLAMA_HOST || 'http://localhost:11434',
+    defaultModel: process.env.DEFAULT_MODEL || 'llama3',
   },
   
   // Frontend URL for CORS

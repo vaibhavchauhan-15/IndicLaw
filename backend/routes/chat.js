@@ -6,7 +6,8 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import openai, { AI_MODELS, getModelSettings, calculateMaxTokens } from '../services/openaiClient.js';
+import ollama, { AI_MODELS, getModelSettings, calculateMaxTokens, createChatCompletion } from '../services/ollamaClient.js';
+import { createStreamingCompletion } from '../services/ollamaStreamClient.js';
 import { extractTextFromImage, isSupportedImageFormat } from '../utils/imageProcessor.js';
 import { extractTextFromPDF, extractTextFromDocx, fileExists } from '../utils/fileProcessor.js';
 import { 
@@ -19,6 +20,24 @@ import responseFormatter from '../utils/responseFormatter.js';
 import config from '../config/index.js';
 
 const router = express.Router();
+
+// Health check endpoint for API route
+router.get('/health', (req, res) => {
+  // Check Ollama configuration
+  const ollamaHost = config.ollama?.host;
+  const ollamaConfigured = !!ollamaHost;
+  
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    environment: config.nodeEnv,
+    timestamp: new Date().toISOString(),
+    apiKeyPresent: ollamaConfigured, // Using the same field for compatibility with frontend
+    apiKeyValid: ollamaConfigured,   // Using the same field for compatibility with frontend
+    ollamaConfigured: ollamaConfigured,
+    ollamaHost: ollamaConfigured ? ollamaHost : null
+  });
+});
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -227,24 +246,23 @@ router.post('/chat', (req, res) => {
         ];
       }
       
-      // Check if API key is available
-      if (!config.openRouter.apiKey) {
-        console.error("Missing API key");
+      // Check if API key is available (for OpenRouter) or Ollama host is configured
+      if (!config.ollama.host) {
+        console.error("Missing Ollama configuration");
         return res.status(500).json({ 
-          error: "Missing API configuration", 
-          reply: "Server configuration error: API key is missing.",
+          error: "Missing Ollama configuration", 
+          reply: "Server configuration error: Ollama host is missing.",
           sessionId 
         });
       }
 
       // Define model fallback sequence
       const modelFallbackSequence = [
-        process.env.DEFAULT_MODEL || AI_MODELS.GPT4O,
-        process.env.FALLBACK_MODEL || AI_MODELS.CLAUDE3HAIKU,
-        AI_MODELS.GPT35TURBO,
-        process.env.BACKUP_MODEL || AI_MODELS.MISTRAL,
-        AI_MODELS.GEMMA,
-        AI_MODELS.LLAMA3
+        process.env.DEFAULT_MODEL || AI_MODELS.LLAMA3,
+        process.env.FALLBACK_MODEL || AI_MODELS.MIXTRAL,
+        AI_MODELS.MISTRAL,
+        process.env.BACKUP_MODEL || AI_MODELS.GEMMA,
+        AI_MODELS.ORCA_MINI
       ];
       
       let modelIndex = 0;
@@ -270,13 +288,11 @@ router.post('/chat', (req, res) => {
           
           // Create API call with timeout
           const apiPromise = Promise.race([
-            openai.chat.completions.create({
+            createChatCompletion({
               model: modelToUse,
               messages: enhancedMessages,
               max_tokens: dynamicMaxTokens,
-              temperature: modelSettings.temperature,
-              presence_penalty: modelSettings.presencePenalty,
-              frequency_penalty: modelSettings.frequencyPenalty,
+              temperature: modelSettings.temperature
             }),
             new Promise((_, reject) => 
               setTimeout(() => reject(new Error("API request timed out")), apiTimeout)
@@ -423,22 +439,22 @@ router.post('/chat/stream', (req, res) => {
       // Get formatted conversation
       let messages = getFormattedConversationMessages(sessionId);
       
-      // Check API key
-      if (!config.openRouter.apiKey) {
+      // Check if Ollama is configured
+      if (!config.ollama?.host) {
         clearTimeout(streamTimeout);
-        console.error("Missing API key");
+        console.error("Missing Ollama configuration");
         return res.status(500).json({ 
-          error: "Missing API configuration", 
-          reply: "Server configuration error: API key is missing.",
+          error: "Missing Ollama configuration", 
+          reply: "Server configuration error: Ollama is not configured.",
           sessionId
         });
       }
 
-      // Define model fallback sequence - simplified
+      // Define model fallback sequence for Ollama
       const streamModelFallbackSequence = [
-        process.env.DEFAULT_STREAM_MODEL || AI_MODELS.GPT4O,
-        process.env.FALLBACK_STREAM_MODEL || AI_MODELS.CLAUDE3HAIKU,
-        AI_MODELS.GPT35TURBO
+        config.ollama.defaultModel || 'gemma3:4b',  // Using configured default model as primary
+        'mistral:7b',  // mistral as fallback
+        'kartikm7/indian-lawen2-1.5b'  // indian law model as last resort
       ];
       
       let modelIndex = 0;
@@ -454,32 +470,21 @@ router.post('/chat/stream', (req, res) => {
         
         // Calculate appropriate token limit
         const modelSettings = getModelSettings(modelToUse);
-        const dynamicMaxTokens = calculateMaxTokens(messages, 800);
+        const dynamicMaxTokens = calculateMaxTokens(modelToUse, enhancedMessages);
         
         console.log(`Calculated max_tokens: ${dynamicMaxTokens} for stream`);
         
-        // Create the streaming request
-        const stream = await openai.chat.completions.create({
+        // Create the streaming request using Ollama
+        // Clear the timeout as we're about to make the request
+        clearTimeout(streamTimeout);
+
+        // Use our streaming client instead
+        aiReply = await createStreamingCompletion({
           model: modelToUse,
           messages: enhancedMessages,
           max_tokens: dynamicMaxTokens,
           temperature: modelSettings.temperature || 0.7,
-          presence_penalty: modelSettings.presencePenalty || 0.3,
-          frequency_penalty: modelSettings.frequencyPenalty || 0.3,
-          stream: true,
-        });
-        
-        // Clear the timeout as we got a response
-        clearTimeout(streamTimeout);
-
-        // Process the stream
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            aiReply += content;
-            res.write(`data: ${JSON.stringify({ content })}\n\n`);
-          }
-        }
+        }, res);
         
         // Add to history and send completion
         addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
@@ -489,18 +494,6 @@ router.post('/chat/stream', (req, res) => {
       } catch (streamError) {
         console.error(`Streaming error with ${modelToUse}:`, streamError.message);
         clearTimeout(streamTimeout);
-        
-        // Handle auth errors specifically
-        if (streamError.status === 401 || streamError.message?.includes('auth')) {
-          console.error("\x1b[31m%s\x1b[0m", "AUTHENTICATION ERROR: Check API key in .env file");
-          res.write(`data: ${JSON.stringify({ 
-            error: "Authentication failed",
-            errorType: "auth",
-            done: true 
-          })}\n\n`);
-          res.end();
-          return;
-        }
         
         // Try fallback model
         modelIndex++;
@@ -513,24 +506,13 @@ router.post('/chat/stream', (req, res) => {
             const modelSettings = getModelSettings(modelToUse);
             const fallbackMaxTokens = Math.min(500, modelSettings.maxTokens || 500);
             
-            const fallbackStream = await openai.chat.completions.create({
+            // Use our streaming client for fallback model
+            aiReply = await createStreamingCompletion({
               model: modelToUse,
               messages: enhancedMessages,
               max_tokens: fallbackMaxTokens,
               temperature: modelSettings.temperature || 0.7,
-              presence_penalty: modelSettings.presencePenalty || 0.3,
-              frequency_penalty: modelSettings.frequencyPenalty || 0.3,
-              stream: true,
-            });
-            
-            aiReply = '';
-            for await (const chunk of fallbackStream) {
-              const content = chunk.choices[0]?.delta?.content || '';
-              if (content) {
-                aiReply += content;
-                res.write(`data: ${JSON.stringify({ content })}\n\n`);
-              }
-            }
+            }, res);
             
             addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
             res.write(`data: ${JSON.stringify({ 
@@ -542,8 +524,8 @@ router.post('/chat/stream', (req, res) => {
             res.end();
             return;
           } catch (fallbackError) {
-            // Last resort fallback
-            const lastFallbackModel = AI_MODELS.GPT35TURBO;
+            // Last resort fallback - use a hardcoded model
+            const lastFallbackModel = 'orca-mini'; // Using orca-mini as emergency fallback
             console.log(`Trying emergency fallback model ${lastFallbackModel}...`);
             
             try {
@@ -552,22 +534,13 @@ router.post('/chat/stream', (req, res) => {
                 ...messages.filter(msg => msg.role === 'user')
               ];
               
-              const lastResortStream = await openai.chat.completions.create({
+              // Use our streaming client for last resort
+              aiReply = await createStreamingCompletion({
                 model: lastFallbackModel,
                 messages: simplifiedMessages,
                 max_tokens: 400,
                 temperature: 0.5,
-                stream: true,
-              });
-              
-              aiReply = '';
-              for await (const chunk of lastResortStream) {
-                const content = chunk.choices[0]?.delta?.content || '';
-                if (content) {
-                  aiReply += content;
-                  res.write(`data: ${JSON.stringify({ content })}\n\n`);
-                }
-              }
+              }, res);
               
               addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
               res.write(`data: ${JSON.stringify({ 

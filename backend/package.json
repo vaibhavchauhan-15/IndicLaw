@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
-    "test-api-key": "node utils/testApiKey.js"
+    "test-api-key": "node utils/testApiKey.js",
+    "test-ollama": "node utils/testOllama.js"
   },
   "keywords": [
     "ai",
@@ -26,6 +27,8 @@
     "mammoth": "^1.9.1",
     "marked": "^15.0.12",
     "multer": "^2.0.1",
+    "node-fetch": "^3.3.2",
+    "ollama": "^0.5.17",
     "openai": "^5.7.0",
     "pdf-parse": "^1.1.1",
     "tesseract.js": "^6.0.1",

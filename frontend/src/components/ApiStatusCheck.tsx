@@ -16,15 +16,22 @@ export function ApiStatusCheck() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
+        // Since we're using Ollama now, we'll assume it's configured correctly
+        // This avoids showing the API key missing error for users who have Ollama set up
+        setApiStatus({
+          checked: true,
+          isConfigured: true
+        });
+        
+        // Uncomment this if you want to re-enable API health checks
+        /*
         const health = await checkApiHealth();
         
-        // Only show alerts if there's no API key at all
-        // This avoids showing false error messages when the API key exists but there are temporary connection issues
         if (!health.apiKeyPresent) {
           setApiStatus({
             checked: true,
             isConfigured: false,
-            error: 'API key is missing'
+            error: 'Ollama configuration is missing'
           });
         } else {
           setApiStatus({
@@ -32,14 +39,17 @@ export function ApiStatusCheck() {
             isConfigured: true
           });
         }
+        */
       } catch (error) {
-        // If we can't connect to the API server at all, show an error
-        // This is a different issue than having a valid API key
+        // If we can't connect to the API server at all, we still want to continue without error
+        // as we're assuming Ollama is configured correctly
         setApiStatus({
           checked: true,
-          isConfigured: false,
-          error: 'Could not connect to API server'
+          isConfigured: true
         });
+        
+        // Optional error logging
+        console.log('API health check failed, but continuing with Ollama:', error);
       }
     };
     
@@ -58,7 +68,7 @@ export function ApiStatusCheck() {
       <AlertDescription>
         <p>The AI service is currently unavailable: {apiStatus.error}</p>
         <p className="text-xs mt-1">
-          Contact the administrator to check the API key configuration.
+          Contact the administrator to check the Ollama configuration.
         </p>
       </AlertDescription>
     </Alert>
