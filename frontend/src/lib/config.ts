@@ -3,12 +3,27 @@
  * important settings and allows for environment-based configuration.
  */
 
+// Helper function to format the API URL for Vercel deployment
+const getApiBaseUrl = () => {
+  // Get the API URL from environment variables
+  const apiUrl = import.meta.env.VITE_API_URL;
+  
+  // If running in production on Vercel
+  if (apiUrl && apiUrl.includes('${VERCEL_URL}')) {
+    // Replace the placeholder with the actual Vercel URL
+    // In production, this will use the HTTPS protocol automatically
+    const vercelUrl = window.location.origin;
+    return apiUrl.replace('${VERCEL_URL}', vercelUrl);
+  }
+  
+  // Default to localhost for development
+  return apiUrl || 'http://localhost:5000/api';
+};
+
 // API configuration
 export const API_CONFIG = {
   // Base URL for API calls
-  // In development: Uses localhost with the backend port (5000)
-  // In production: Would use the deployed API URL
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseUrl: getApiBaseUrl(),
 };
 
 // Firebase configuration is handled in firebase.ts

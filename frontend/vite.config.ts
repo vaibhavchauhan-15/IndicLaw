@@ -26,7 +26,33 @@ export default defineConfig(({ mode }) => {
     },
     // Expose environment variables to the frontend
     define: {
-      __APP_ENV__: env.APP_ENV
-    }
+      __APP_ENV__: env.APP_ENV,
+      // Make environment info available at build time
+      __VITE_MODE__: JSON.stringify(mode),
+    },
+    // Add base path for assets in production
+    base: '/',
+    // Optimizations for production builds
+    build: {
+      // Generate sourcemaps for easier debugging
+      sourcemap: mode !== 'production',
+      // Optimize chunk size
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'firebase/analytics'],
+            ui: [
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-toast',
+              '@radix-ui/react-tooltip',
+            ],
+          },
+        },
+      },
+    },
   };
 });
