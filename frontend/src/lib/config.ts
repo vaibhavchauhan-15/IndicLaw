@@ -3,7 +3,7 @@
  * important settings and allows for environment-based configuration.
  */
 
-// Helper function to format the API URL for Vercel deployment
+// Helper function to format the API URL for cloud deployments (Vercel or Netlify)
 const getApiBaseUrl = () => {
   // Get the API URL from environment variables
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -14,6 +14,13 @@ const getApiBaseUrl = () => {
     // In production, this will use the HTTPS protocol automatically
     const vercelUrl = window.location.origin;
     return apiUrl.replace('${VERCEL_URL}', vercelUrl);
+  }
+  
+  // If running in production on Netlify
+  if (apiUrl && apiUrl.includes('${NETLIFY_URL}')) {
+    // Replace the placeholder with the actual Netlify URL
+    const netlifyUrl = window.location.origin;
+    return apiUrl.replace('${NETLIFY_URL}', netlifyUrl);
   }
   
   // Default to localhost for development

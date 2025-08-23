@@ -1,0 +1,20 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Handle SPA routing by redirecting all requests to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variable settings
+[context.production.environment]
+  # Set production environment variables here
+  # Or use the Netlify UI to set them
+
+[context.deploy-preview.environment]
+  # Set preview environment variables here
+
+[context.branch-deploy.environment]
+  # Set branch deployment environment variables here
