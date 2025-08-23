@@ -18,6 +18,7 @@ IndicLaw AI is an intelligent chatbot system designed to provide legal informati
 - [API Reference](#api-reference)
 - [Multilingual Support](#multilingual-support)
 - [Document Processing](#document-processing)
+- [Deployment](#deployment)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -211,6 +212,27 @@ The application can process various document types:
 - **PDF**: Extract text content for analysis
 - **DOCX**: Extract text from Microsoft Word documents
 - **Images**: Use OCR to extract text from images
+
+## 🚀 Deployment
+
+The frontend of IndicLaw can be deployed to Vercel for fast and reliable hosting:
+
+### Vercel Deployment
+
+For detailed instructions on deploying the frontend to Vercel, see the [Vercel Deployment Guide](./frontend/VERCEL_DEPLOYMENT.md).
+
+If you encounter any errors during deployment, refer to the [Vercel Error Codes Reference](./frontend/VERCEL_ERROR_CODES.md) for troubleshooting common error codes.
+
+### Backend Deployment
+
+The backend can be deployed to platforms like:
+- Heroku
+- Render
+- Digital Ocean
+- AWS
+- Google Cloud Platform
+
+Make sure to update the environment variables in your frontend deployment to point to the deployed backend URL.
 
 ## 🤝 Contributing
 
