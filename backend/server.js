@@ -3,13 +3,26 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import mongoose from 'mongoose';
 import chatRoute from './routes/chat.js';
+import chatDBRoute from './routes/chatDB.js';
+import authRoute from './routes/auth.js';
+import documentRoute from './routes/documents.js';
 import { requestLogger, errorHandler } from './middleware/logger.js';
 import config from './config/index.js';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Connect to MongoDB
+mongoose.connect(config.mongodb.uri)
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((err) => {
+    console.error('Failed to connect to MongoDB:', err.message);
+  });
 
 // Validate essential configuration
 if (!config.ollama.host) {
@@ -48,6 +61,9 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api', chatRoute);
+app.use('/api/db', chatDBRoute); // MongoDB-based chat routes
+app.use('/api/auth', authRoute);
+app.use('/api/documents', documentRoute);
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');

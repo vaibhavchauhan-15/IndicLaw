@@ -13,6 +13,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
+import { loginUser } from '@/lib/authApi';
+import { Eye, EyeOff } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const { t } = useTranslation();
@@ -50,6 +52,40 @@ const LoginPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Try to login with MongoDB first
+      try {
+        const response = await loginUser({
+          email: values.email,
+          password: values.password
+        });
+        
+        if (response.success) {
+          // Store the JWT token
+          localStorage.setItem('authToken', response.token);
+          localStorage.setItem('lastLoginTime', new Date().toISOString());
+          
+          // Store email if remember me is checked
+          rememberMe
+            ? localStorage.setItem('rememberedEmail', values.email)
+            : localStorage.removeItem('rememberedEmail');
+            
+          // Also try to login with Firebase for backward compatibility
+          try {
+            await login(values.email, values.password);
+          } catch (firebaseErr) {
+            console.warn('Firebase login failed, but MongoDB login succeeded:', firebaseErr);
+          }
+          
+          navigate(from, { replace: true });
+          toast({ title: t('login.success'), description: t('login.welcome') });
+          return;
+        }
+      } catch (mongoErr) {
+        console.error('MongoDB login failed, trying Firebase:', mongoErr);
+      }
+      
+      // Fallback to Firebase login
       await login(values.email, values.password);
       localStorage.setItem('lastLoginTime', new Date().toISOString());
       rememberMe

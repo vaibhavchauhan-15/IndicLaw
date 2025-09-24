@@ -35,6 +35,11 @@ const config = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
   
+  // MongoDB configuration
+  mongodb: {
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/indiclaw',
+  },
+  
   // OpenRouter API configuration (legacy)
   openRouter: {
     apiKey: process.env.OPENROUTER_API_KEY,

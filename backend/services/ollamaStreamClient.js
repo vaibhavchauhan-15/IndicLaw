@@ -11,11 +11,12 @@ import config from '../config/index.js';
  * @param {Array} params.messages - Array of message objects
  * @param {number} params.max_tokens - Maximum tokens to generate
  * @param {number} params.temperature - Temperature for generation
+ * @param {Function} params.onChunk - Optional callback for each chunk
  * @param {Response} res - Express response object to write stream chunks to
- * @returns {Promise<void>} - Promise that resolves when streaming is complete
+ * @returns {Promise<string>} - Promise that resolves to the full response text
  */
 export async function createStreamingCompletion(params, res) {
-  const { model, messages, max_tokens, temperature } = params;
+  const { model, messages, max_tokens, temperature, onChunk } = params;
   const ollamaHost = config.ollama?.host || 'http://localhost:11434';
   
   // Validate messages is an array
@@ -108,6 +109,14 @@ export async function createStreamingCompletion(params, res) {
               
               // Send the chunk to the client
               res.write(`data: ${JSON.stringify({ content: parsed.response })}\n\n`);
+              
+              // Call onChunk callback if provided
+              if (typeof onChunk === 'function') {
+                onChunk({
+                  content: parsed.response,
+                  done: false
+                });
+              }
             }
           } catch (e) {
             console.error('Error parsing JSON chunk:', e);
@@ -119,6 +128,15 @@ export async function createStreamingCompletion(params, res) {
       // Handle end of stream
       response.body.on('end', () => {
         console.log('Streaming completed');
+        
+        // Call onChunk callback if provided with done=true
+        if (typeof onChunk === 'function') {
+          onChunk({
+            content: fullResponse,
+            done: true
+          });
+        }
+        
         resolve(fullResponse);
       });
       

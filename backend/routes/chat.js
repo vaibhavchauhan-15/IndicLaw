@@ -15,9 +15,10 @@ import {
   getConversationHistory, 
   clearConversationHistory, 
   getFormattedConversationMessages 
-} from '../utils/chatHistory.js';
+} from '../utils/chatHistoryDB.js';
 import responseFormatter from '../utils/responseFormatter.js';
 import config from '../config/index.js';
+import { optionalAuthenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -388,9 +389,11 @@ router.post('/chat', (req, res) => {
  * Process a chat message with streaming response
  * POST /api/chat/stream
  */
-router.post('/chat/stream', (req, res) => {
+router.post('/chat/stream', optionalAuthenticateToken, (req, res) => {
   upload.single('file')(req, res, async (err) => {
     const sessionId = req.body.sessionId || uuidv4();
+    // Get user ID from authenticated request if available
+    const userId = req.user?.id || null;
     
     // Handle file upload errors
     if (handleUploadError(err, res, sessionId)) return;
@@ -433,11 +436,11 @@ router.post('/chat/stream', (req, res) => {
 
       console.log(`Processing user message for stream session: ${sessionId}`);
       
-      // Add user message to history
-      addMessageToHistory(sessionId, { role: 'user', content: userMessage });
+      // Add user message to history with userId
+      await addMessageToHistory(sessionId, { role: 'user', content: userMessage }, userId);
       
       // Get formatted conversation
-      let messages = getFormattedConversationMessages(sessionId);
+      let messages = await getFormattedConversationMessages(sessionId);
       
       // Check if Ollama is configured
       if (!config.ollama?.host) {
@@ -484,10 +487,14 @@ router.post('/chat/stream', (req, res) => {
           messages: enhancedMessages,
           max_tokens: dynamicMaxTokens,
           temperature: modelSettings.temperature || 0.7,
+          onChunk: (chunk) => {
+            // Just a placeholder for the streaming chunks
+          }
         }, res);
         
         // Add to history and send completion
-        addMessageToHistory(sessionId, { role: 'assistant', content: aiReply });
+        await addMessageToHistory(sessionId, { role: 'assistant', content: aiReply }, userId);
+        console.log("Saved AI response to MongoDB:", { sessionId, responseLength: aiReply.length });
         res.write(`data: ${JSON.stringify({ done: true, sessionId, model: modelToUse })}\n\n`);
         res.end();
         

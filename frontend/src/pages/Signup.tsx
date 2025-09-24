@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff } from 'lucide-react';
+import { registerUser } from '@/lib/authApi';
 
 const SignupPage: React.FC = () => {
   const { t } = useTranslation();
@@ -45,10 +46,31 @@ const SignupPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const user = await signup(values.email, values.password, values.name);
-      localStorage.setItem('signupTime', new Date().toISOString());
-      toast({ title: t('signup.success'), description: t('signup.welcome', { name: values.name }) });
-      if (user) navigate(from, { replace: true });
+      
+      // Register with MongoDB API instead of Firebase
+      const response = await registerUser({
+        name: values.name,
+        email: values.email,
+        password: values.password
+      });
+      
+      if (response.success) {
+        // Store the JWT token
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('signupTime', new Date().toISOString());
+        
+        // Also perform Firebase signup for backward compatibility
+        try {
+          await signup(values.email, values.password, values.name);
+        } catch (firebaseErr) {
+          console.warn('Firebase signup failed, but MongoDB registration succeeded:', firebaseErr);
+        }
+        
+        toast({ title: t('signup.success'), description: t('signup.welcome', { name: values.name }) });
+        navigate(from, { replace: true });
+      } else {
+        throw new Error(response.message || 'Registration failed');
+      }
     } catch (err: any) {
       const errorMsg = {
         'auth/email-already-in-use': t('signup.emailInUse'),
