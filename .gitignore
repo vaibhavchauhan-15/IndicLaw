@@ -1,44 +1,58 @@
-# Node.js dependencies
+# Dependencies
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-.pnpm-debug.log
-.npm/
+.pnp/
+.pnp.js
 .yarn/
-.pnp.*
+.npm/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # Build outputs
 dist/
 build/
 out/
 .output/
+.next/
+.nuxt/
+.vite/
 
 # Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.template
 
 # Logs
 logs/
 *.log
+npm-debug.log*
 
 # IDE and editor files
 .idea/
-.vscode/
-*.swp
-*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .DS_Store
-.directory
 Thumbs.db
+Desktop.ini
 
 # Backend specific
 backend/uploads/*
 !backend/uploads/.gitkeep
 backend/logs/
 backend/coverage/
+backend/dist/
 
 # Frontend specific
 frontend/.vite/
@@ -46,26 +60,39 @@ frontend/coverage/
 frontend/stats.html
 frontend/.cache/
 frontend/public/build/
+frontend/dist/
+.vercel/
 
 # Package managers
 bun.lockb
-yarn.lock
-package-lock.json
-pnpm-lock.yaml
+# Uncomment below if you want to ignore lock files
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.lcov
+.coverage
+junit.xml
 
 # Temporary files
 .tmp/
 temp/
 tmp/
 *.tmp
-
-# Test coverage
-coverage/
-.nyc_output/
+.temp/
+*.cache
+.cache/
 
 # Generated files
 *.generated.*
 generated/
+.docusaurus
+.serverless/
 
-# Misc
-.cache/
+# Optional local files
+*.local
+
+# Project specific (add your custom ignores here)
